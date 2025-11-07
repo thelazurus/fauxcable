@@ -1,0 +1,16 @@
+
+---
+
+## 🧹 **.gitignore**
+
+```gitignore
+# Python
+__pycache__/
+*.pyc
+.venv/
+env/
+*.log
+
+# FauxCable runtime
+poster_cache.json
+logs/
