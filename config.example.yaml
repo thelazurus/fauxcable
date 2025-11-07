@@ -1,0 +1,15 @@
+paths:
+  input: /ssd/appdata/iptvboss/output/LazurusTV.xml
+  output: /ssd/appdata/jellyfin/epg/LazurusTV.xml
+  cache: /home/wren/tvpostproc/poster_cache.json
+  log: /home/wren/tvpostproc/logs/postproc.log
+  assets: /home/wren/tvpostproc/assets/
+
+jellyfin:
+  url: http://10.0.0.205:8096
+  apikey: "YOUR_JELLYFIN_API_KEY_HERE"
+
+behavior:
+  batch_size: 100
+  show_progress_eta: true
+  log_level: INFO

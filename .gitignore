@@ -14,3 +14,4 @@ env/
 # FauxCable runtime
 poster_cache.json
 logs/
+config.yaml
