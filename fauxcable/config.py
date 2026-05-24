@@ -1,9 +1,13 @@
 import os
-import yaml
 from dataclasses import dataclass
 from pathlib import Path
 
-CONFIG_PATH = Path(os.environ.get("FAUXCABLE_CONFIG", "config.yaml"))
+import yaml
+
+# Written by the Settings page — lives in the persistent data volume
+_SETTINGS_PATH = Path("data/config.yaml")
+# Optional local file for dev convenience (not used in Docker)
+_LOCAL_PATH = Path("config.yaml")
 
 
 @dataclass
@@ -21,32 +25,68 @@ class Config:
     retry_delay: int = 2
 
 
+def _apply_yaml(cfg: Config, data: dict) -> None:
+    if "dispatcharr_epg_url" in data:
+        cfg.dispatcharr_epg_url = data["dispatcharr_epg_url"]
+    if "base_url" in data:
+        cfg.base_url = data["base_url"].rstrip("/")
+    jf = data.get("jellyfin", {})
+    if "url" in jf:
+        cfg.jellyfin_url = jf["url"]
+    if "api_key" in jf:
+        cfg.jellyfin_api_key = jf["api_key"]
+    tmdb = data.get("tmdb", {})
+    if "enabled" in tmdb:
+        cfg.tmdb_enabled = tmdb["enabled"]
+    if "api_key" in tmdb:
+        cfg.tmdb_api_key = tmdb["api_key"]
+    beh = data.get("behavior", {})
+    if "schedule_interval_hours" in beh:
+        cfg.schedule_interval_hours = float(beh["schedule_interval_hours"])
+    if "concurrency" in beh:
+        cfg.concurrency = int(beh["concurrency"])
+    if "rate_limit_delay" in beh:
+        cfg.rate_limit_delay = float(beh["rate_limit_delay"])
+    if "retry_attempts" in beh:
+        cfg.retry_attempts = int(beh["retry_attempts"])
+    if "retry_delay" in beh:
+        cfg.retry_delay = int(beh["retry_delay"])
+
+
+def _apply_env(cfg: Config) -> None:
+    if v := os.environ.get("DISPATCHARR_EPG_URL"):
+        cfg.dispatcharr_epg_url = v
+    if v := os.environ.get("FAUXCABLE_BASE_URL"):
+        cfg.base_url = v.rstrip("/")
+    if v := os.environ.get("JELLYFIN_URL"):
+        cfg.jellyfin_url = v
+    if v := os.environ.get("JELLYFIN_API_KEY"):
+        cfg.jellyfin_api_key = v
+    if v := os.environ.get("TMDB_API_KEY"):
+        cfg.tmdb_api_key = v
+    if v := os.environ.get("SCHEDULE_INTERVAL_HOURS"):
+        cfg.schedule_interval_hours = float(v)
+    if v := os.environ.get("CONCURRENCY"):
+        cfg.concurrency = int(v)
+
+
 def load_config() -> Config:
     cfg = Config()
-    if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-        cfg.dispatcharr_epg_url = data.get("dispatcharr_epg_url", cfg.dispatcharr_epg_url)
-        cfg.base_url = data.get("base_url", cfg.base_url).rstrip("/")
-        jf = data.get("jellyfin", {})
-        cfg.jellyfin_url = jf.get("url", cfg.jellyfin_url)
-        cfg.jellyfin_api_key = jf.get("api_key", cfg.jellyfin_api_key)
-        tmdb = data.get("tmdb", {})
-        cfg.tmdb_enabled = tmdb.get("enabled", cfg.tmdb_enabled)
-        cfg.tmdb_api_key = tmdb.get("api_key", cfg.tmdb_api_key)
-        beh = data.get("behavior", {})
-        cfg.schedule_interval_hours = float(beh.get("schedule_interval_hours", cfg.schedule_interval_hours))
-        cfg.concurrency = int(beh.get("concurrency", cfg.concurrency))
-        cfg.rate_limit_delay = float(beh.get("rate_limit_delay", cfg.rate_limit_delay))
-        cfg.retry_attempts = int(beh.get("retry_attempts", cfg.retry_attempts))
-        cfg.retry_delay = int(beh.get("retry_delay", cfg.retry_delay))
 
-    # env var overrides (useful for Docker secrets)
-    cfg.dispatcharr_epg_url = os.environ.get("DISPATCHARR_EPG_URL", cfg.dispatcharr_epg_url)
-    cfg.base_url = os.environ.get("FAUXCABLE_BASE_URL", cfg.base_url).rstrip("/")
-    cfg.jellyfin_url = os.environ.get("JELLYFIN_URL", cfg.jellyfin_url)
-    cfg.jellyfin_api_key = os.environ.get("JELLYFIN_API_KEY", cfg.jellyfin_api_key)
-    cfg.tmdb_api_key = os.environ.get("TMDB_API_KEY", cfg.tmdb_api_key)
+    # 1. Local config.yaml — dev convenience, ignored in Docker (no volume mount)
+    if _LOCAL_PATH.exists():
+        with open(_LOCAL_PATH, "r", encoding="utf-8") as f:
+            _apply_yaml(cfg, yaml.safe_load(f) or {})
+
+    # 2. Environment variables — primary config source in Docker
+    _apply_env(cfg)
+
+    # 3. Persistent Settings saves — written by the UI, stored in the data volume
+    #    Takes highest priority so UI changes survive restarts
+    if _SETTINGS_PATH.exists():
+        with open(_SETTINGS_PATH, "r", encoding="utf-8") as f:
+            _apply_yaml(cfg, yaml.safe_load(f) or {})
+
     return cfg
 
 
@@ -67,10 +107,11 @@ def reload_config() -> Config:
 
 
 def save_config(updates: dict):
-    """Write updated values back to config.yaml."""
+    """Persist changes from the Settings page to data/config.yaml."""
+    _SETTINGS_PATH.parent.mkdir(exist_ok=True)
     data: dict = {}
-    if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+    if _SETTINGS_PATH.exists():
+        with open(_SETTINGS_PATH, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
     if "dispatcharr_epg_url" in updates:
@@ -94,7 +135,7 @@ def save_config(updates: dict):
         if key in updates:
             beh[key] = updates[key]
 
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+    with open(_SETTINGS_PATH, "w", encoding="utf-8") as f:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
 
     reload_config()

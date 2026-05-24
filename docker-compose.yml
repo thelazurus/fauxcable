@@ -3,9 +3,22 @@ services:
     build: https://github.com/thelazurus/fauxcable.git
     ports:
       - "8000:8000"
+    environment:
+      # --- Required ---
+      # Your Dispatcharr EPG output URL
+      - DISPATCHARR_EPG_URL=http://your-dispatcharr-host/output/epg
+      # FauxCable's own address — must be reachable by Jellyfin (not localhost)
+      - FAUXCABLE_BASE_URL=http://your-server-ip:8000
+      # Jellyfin connection
+      - JELLYFIN_URL=http://your-jellyfin-host:8096
+      - JELLYFIN_API_KEY=your-jellyfin-api-key
+      # TMDB API key — https://www.themoviedb.org/settings/api
+      - TMDB_API_KEY=your-tmdb-api-key
+      # --- Optional ---
+      # - SCHEDULE_INTERVAL_HOURS=6
+      # - CONCURRENCY=10
     volumes:
       - ./data:/app/data
       - ./generics:/app/generics
       - ./fonts:/app/fonts
-      - ./config.yaml:/app/config.yaml
     restart: unless-stopped
