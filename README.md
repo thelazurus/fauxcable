@@ -31,51 +31,81 @@ Replaces the plain channel icons in your guide with proper show/movie poster art
 
 ---
 
-## Quick Start (Docker)
+## Quick Start
 
-**1. Clone and configure**
-```bash
-git clone https://github.com/thelazurus/fauxcable.git
-cd fauxcable
-cp config.example.yaml config.yaml
-nano config.yaml   # fill in your values — see Configuration below
+### Unraid / Docker Compose Manager
+
+The easiest deployment — no files to copy, no SSH required. Paste the compose below into your Compose Manager, fill in the five environment variables, and deploy.
+
+```yaml
+services:
+  fauxcable:
+    build: https://github.com/thelazurus/fauxcable.git
+    ports:
+      - "8000:8000"
+    environment:
+      # --- Required ---
+      - DISPATCHARR_EPG_URL=http://your-dispatcharr-host/output/epg
+      - FAUXCABLE_BASE_URL=http://your-server-ip:8000
+      - JELLYFIN_URL=http://your-jellyfin-host:8096
+      - JELLYFIN_API_KEY=your-jellyfin-api-key
+      - TMDB_API_KEY=your-tmdb-api-key
+      # --- Optional ---
+      # - SCHEDULE_INTERVAL_HOURS=6
+      # - CONCURRENCY=10
+    volumes:
+      - ./data:/app/data
+      - ./generics:/app/generics
+      - ./fonts:/app/fonts
+    restart: unless-stopped
 ```
 
-**2. Start**
+### Standard Docker
+
 ```bash
+# Download just the compose file
+curl -O https://raw.githubusercontent.com/thelazurus/fauxcable/main/docker-compose.yml
+
+# Edit the environment variables
+nano docker-compose.yml
+
+# Build and run
 docker compose up -d --build
 ```
 
-**3. Open the UI**
-```
-http://your-server-ip:8000
-```
+### After starting
 
-**4. Point Jellyfin at FauxCable**
-
-In Jellyfin → Dashboard → Live TV → EPG sources, replace your Dispatcharr EPG URL with:
-```
-http://your-server-ip:8000/epg.xml
-```
-
-FauxCable will run its first pipeline automatically based on your schedule, or hit **Run Now** on the dashboard.
+1. Open `http://your-server-ip:8000`
+2. Hit **Run Now** on the dashboard to kick off the first pipeline
+3. In Jellyfin → Dashboard → Live TV → EPG sources, replace your Dispatcharr EPG URL with:
+   ```
+   http://your-server-ip:8000/epg.xml
+   ```
 
 ---
 
 ## Configuration
 
-Copy `config.example.yaml` to `config.yaml` and fill in:
+All configuration is set via environment variables in your compose file. No config file required.
 
-| Key | Description |
-|-----|-------------|
-| `dispatcharr_epg_url` | Your Dispatcharr EPG output URL |
-| `base_url` | FauxCable's externally-reachable address — **must be reachable by Jellyfin**, not `localhost` |
-| `jellyfin.url` | Jellyfin internal URL |
-| `jellyfin.api_key` | Jellyfin API key (Dashboard → API Keys) |
-| `tmdb.api_key` | TMDB API key ([get one free](https://www.themoviedb.org/settings/api)) |
-| `behavior.schedule_interval_hours` | How often to re-run enrichment (default: 6) |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DISPATCHARR_EPG_URL` | ✅ | Your Dispatcharr EPG output URL |
+| `FAUXCABLE_BASE_URL` | ✅ | FauxCable's externally-reachable address — **must be reachable by Jellyfin**, not `localhost` |
+| `JELLYFIN_URL` | ✅ | Jellyfin internal URL |
+| `JELLYFIN_API_KEY` | ✅ | Jellyfin API key (Dashboard → API Keys) |
+| `TMDB_API_KEY` | ✅ | TMDB API key — [get one free](https://www.themoviedb.org/settings/api) |
+| `SCHEDULE_INTERVAL_HOURS` | — | How often to re-run enrichment (default: `6`) |
+| `CONCURRENCY` | — | Parallel poster lookups per batch (default: `10`) |
 
-All settings are also editable via the Settings page in the UI.
+### Config priority
+
+Settings are applied in this order, with later sources winning:
+
+1. **Environment variables** — your compose file (primary)
+2. **Settings page** — changes saved in the UI are written to `data/config.yaml` inside the persistent data volume and take precedence over env vars on next restart
+
+This means you can set baseline config in your compose file and fine-tune anything from the Settings page without touching the compose file again.
 
 ---
 
@@ -83,8 +113,7 @@ All settings are also editable via the Settings page in the UI.
 
 | Host path | Container path | Purpose |
 |-----------|---------------|---------|
-| `./config.yaml` | `/app/config.yaml` | Configuration |
-| `./data/` | `/app/data/` | SQLite database + enriched EPG XML |
+| `./data/` | `/app/data/` | SQLite database, enriched EPG XML, and Settings page overrides |
 | `./generics/` | `/app/generics/` | Generic fallback poster PNGs |
 | `./fonts/` | `/app/fonts/` | Uploaded TTF/OTF fonts for the poster builder |
 
