@@ -6,6 +6,8 @@ Replaces plain channel icons in your guide with proper show/movie poster art, wi
 
 > **EPG source compatibility** — FauxCable is designed and tested with [Dispatcharr](https://github.com/Dispatcharr/Dispatcharr) as the upstream EPG source, but should work with any standard XMLTV feed URL.
 
+> **Vibe coded** — this project was built entirely through conversational AI (Claude). It works and is tested, but hasn't been audited line-by-line by a human developer. Use it, break it, improve it — PRs welcome.
+
 ---
 
 ## Features
@@ -157,12 +159,6 @@ Filenames must follow the pattern `generic_{category}.png` where `{category}` ma
 | Port | Use |
 |------|-----|
 | `8000` | Web UI + `/epg.xml` endpoint |
-
----
-
-## Vibe Coded
-
-This project was built entirely through conversational AI (Claude) — no traditional hand-written code. It works, it's tested, but it hasn't been audited by a human developer line-by-line. Use it, break it, improve it — PRs welcome.
 
 ---
 
