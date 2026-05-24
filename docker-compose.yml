@@ -1,6 +1,6 @@
 services:
   fauxcable:
-    build: .
+    build: https://github.com/thelazurus/fauxcable.git
     ports:
       - "8000:8000"
     volumes:
