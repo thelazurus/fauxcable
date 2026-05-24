@@ -24,6 +24,21 @@
   </div>
 </div>
 
+<!-- Missing generics warning -->
+{% if missing_generics %}
+<div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-lg px-4 py-3 text-sm mb-5 flex items-start gap-2">
+  <span class="shrink-0 mt-0.5">⚠</span>
+  <span>
+    No generic poster file for:
+    {% for cat in missing_generics | sort %}
+    <code class="bg-amber-900/30 px-1.5 py-0.5 rounded text-amber-200 mx-0.5">{{ cat }}</code>
+    {% endfor %}
+    — items in these categories will show a broken image until you build the poster.
+    <a href="/generic-builder" class="underline hover:text-amber-200 ml-1">Generic Builder →</a>
+  </span>
+</div>
+{% endif %}
+
 <!-- Category filter bar -->
 <div class="flex flex-wrap gap-2 mb-6">
   <a href="/matches"
@@ -36,8 +51,10 @@
               {% if current_category == cat.category %}ring-1 ring-sky-500{% endif %}">
     <a href="/matches?category={{ cat.category }}"
        class="px-3 py-1.5 text-xs font-medium transition-colors
-              {% if current_category == cat.category %}bg-sky-500/20 text-sky-300{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
-      {{ cat.category }}&nbsp;<span class="opacity-60">{{ cat.count }}</span>
+              {% if current_category == cat.category %}bg-sky-500/20 text-sky-300
+              {% elif cat.category in missing_generics %}bg-amber-500/10 text-amber-400 hover:bg-amber-500/20
+              {% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+      {{ cat.category }}&nbsp;<span class="opacity-60">{{ cat.count }}</span>{% if cat.category in missing_generics %}&nbsp;⚠{% endif %}
     </a>
     <button
       hx-delete="/api/unmatched/category/{{ cat.category }}"
@@ -90,7 +107,10 @@
     <div>
       <p class="font-medium text-white">{{ item.display_title }}</p>
       <p class="text-xs text-slate-500 mt-0.5">
-        category: <span class="text-slate-400">{{ item.category }}</span>
+        category:
+        <span class="{% if item.category in missing_generics %}text-amber-400{% else %}text-slate-400{% endif %}">
+          {{ item.category }}{% if item.category in missing_generics %} ⚠{% endif %}
+        </span>
         &nbsp;·&nbsp; seen <span class="text-slate-400">{{ item.run_count }}×</span>
       </p>
     </div>

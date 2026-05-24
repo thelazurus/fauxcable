@@ -49,6 +49,18 @@ async def matches_page(request: Request, category: str = ""):
     ctx["items"] = await db.list_unmatched(100, category=category or None)
     ctx["categories"] = await db.list_categories()
     ctx["current_category"] = category
+
+    # Determine which queue categories have no generic_{cat}.png file so the
+    # template can warn the user that those categories will serve broken images.
+    generics_dir = Path("generics")
+    existing_generics = (
+        {f.stem.replace("generic_", "") for f in generics_dir.glob("generic_*.png")}
+        if generics_dir.exists() else set()
+    )
+    ctx["missing_generics"] = {
+        cat["category"] for cat in ctx["categories"]
+    } - existing_generics
+
     return _resp(request, "matches.html", ctx)
 
 
