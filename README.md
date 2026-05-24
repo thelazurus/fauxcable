@@ -160,6 +160,12 @@ Filenames must follow the pattern `generic_{category}.png` where `{category}` ma
 
 ---
 
+## Vibe Coded
+
+This project was built entirely through conversational AI (Claude) — no traditional hand-written code. It works, it's tested, but it hasn't been audited by a human developer line-by-line. Use it, break it, improve it — PRs welcome.
+
+---
+
 ## License
 
 MIT
