@@ -2,6 +2,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
@@ -165,15 +166,26 @@ async def debug_full_reset(request: Request):
 # ---------------------------------------------------------------------------
 
 @router.post("/settings")
-async def update_settings(body: dict):
-    # Validate any URL fields before persisting — prevents SSRF via epg_url /
-    # jellyfin_url being set to file://, gopher://, or internal cloud-metadata
-    # endpoints (e.g. http://169.254.169.254/).
+async def update_settings(request: Request):
+    # HTMX submits forms as application/x-www-form-urlencoded, not JSON,
+    # so we read the raw form data rather than declaring `body: dict`
+    # (which FastAPI would interpret as a JSON body and silently 422).
+    form_data = await request.form()
+    body: dict = dict(form_data)
+
+    # HTML checkboxes are absent from form data when unchecked — convert to bool
+    body["tmdb_enabled"] = "tmdb_enabled" in form_data
+
+    # Validate URL fields before persisting (SSRF defence)
     for field in _URL_FIELDS:
         if value := (body.get(field) or "").strip():
             _validate_url(value, field)
+
     save_config(body)
     cfg = get_config()
     if "schedule_interval_hours" in body:
         reschedule(float(body["schedule_interval_hours"]))
-    return {"status": "ok", "config": cfg.__dict__}
+
+    # Return an HTML fragment — hx-target="#save-msg" swaps this into the
+    # status div, and showSaved() makes it visible for 3 s.
+    return HTMLResponse("Settings saved.")
