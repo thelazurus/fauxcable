@@ -1,6 +1,6 @@
 services:
   fauxcable:
-    build: https://github.com/thelazurus/fauxcable.git
+    image: ghcr.io/thelazurus/fauxcable:latest
     ports:
       - "8000:8000"
     environment:

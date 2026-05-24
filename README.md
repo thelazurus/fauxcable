@@ -44,7 +44,7 @@ Paste the compose below into your Docker Compose setup, fill in the environment 
 ```yaml
 services:
   fauxcable:
-    build: https://github.com/thelazurus/fauxcable.git
+    image: ghcr.io/thelazurus/fauxcable:latest
     ports:
       - "8000:8000"
     environment:
@@ -77,8 +77,8 @@ curl -O https://raw.githubusercontent.com/thelazurus/fauxcable/main/docker-compo
 # Edit the environment variables
 nano docker-compose.yml
 
-# Build and run
-docker compose up -d --build
+# Pull and run
+docker compose up -d
 ```
 
 ### After starting
