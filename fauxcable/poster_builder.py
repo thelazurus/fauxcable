@@ -19,9 +19,17 @@ def list_fonts() -> list[str]:
 
 def _load_font(font_name: str | None, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     if font_name:
-        path = _FONTS_DIR / font_name
-        if path.exists():
-            return ImageFont.truetype(str(path), size)
+        # Use only the bare filename — Path().name strips any directory component,
+        # preventing traversal like "../etc/passwd" or "/etc/passwd" (absolute paths
+        # would otherwise override the base dir in Python's pathlib join).
+        safe_name = Path(font_name).name
+        if safe_name:
+            path = _FONTS_DIR / safe_name
+            if path.exists():
+                try:
+                    return ImageFont.truetype(str(path), size)
+                except OSError:
+                    pass  # not a valid font file — fall through to default
     return ImageFont.load_default(size=size)
 
 

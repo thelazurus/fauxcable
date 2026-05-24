@@ -1,7 +1,29 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
+
+# ---------------------------------------------------------------------------
+# URL validation (SSRF defence)
+# ---------------------------------------------------------------------------
+
+_ALLOWED_URL_SCHEMES = {"http", "https"}
+# Fields in the settings payload that contain URLs fetched server-side
+_URL_FIELDS = ("epg_url", "jellyfin_url", "base_url")
+
+
+def _validate_url(value: str, field: str) -> None:
+    """Raise HTTPException 400 if *value* is not a plain http/https URL."""
+    try:
+        parsed = urlparse(value.strip())
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"{field}: invalid URL")
+    if parsed.scheme not in _ALLOWED_URL_SCHEMES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{field}: only http:// and https:// URLs are accepted",
+        )
 
 from fauxcable import database as db
 from fauxcable.config import get_config, save_config
@@ -122,7 +144,15 @@ async def search(q: str, type: str = "show"):
 # ---------------------------------------------------------------------------
 
 @router.post("/debug/full-reset")
-async def debug_full_reset():
+async def debug_full_reset(request: Request):
+    # Fetch Metadata defence against cross-origin CSRF.
+    # Browsers set Sec-Fetch-Site: same-origin for HTMX requests from the same
+    # host; a cross-origin form POST or fetch() will have "cross-site" /
+    # "cross-origin" and is rejected.  Missing header (e.g. curl) is allowed —
+    # direct LAN access is an accepted risk for an unauthenticated local tool.
+    fetch_site = request.headers.get("sec-fetch-site", "")
+    if fetch_site and fetch_site not in ("same-origin", "same-site", "none"):
+        raise HTTPException(status_code=403, detail="Forbidden")
     await db.full_reset()
     enriched = Path("data/enriched.xml")
     if enriched.exists():
@@ -136,6 +166,12 @@ async def debug_full_reset():
 
 @router.post("/settings")
 async def update_settings(body: dict):
+    # Validate any URL fields before persisting — prevents SSRF via epg_url /
+    # jellyfin_url being set to file://, gopher://, or internal cloud-metadata
+    # endpoints (e.g. http://169.254.169.254/).
+    for field in _URL_FIELDS:
+        if value := (body.get(field) or "").strip():
+            _validate_url(value, field)
     save_config(body)
     cfg = get_config()
     if "schedule_interval_hours" in body:
