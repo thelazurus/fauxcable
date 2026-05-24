@@ -92,7 +92,7 @@ async def library_page(request: Request, source: str = "", search: str = "", pag
 
 
 @router.get("/library/edit/{title_key:path}", response_class=HTMLResponse)
-async def library_edit(request: Request, title_key: str):
+async def library_edit(request: Request, title_key: str, upload_error: bool = False):
     entry = await db.get_cache_entry(title_key)
     if not entry:
         return HTMLResponse("Not found", status_code=404)
@@ -107,6 +107,7 @@ async def library_edit(request: Request, title_key: str):
     ctx = await _base_ctx("library")
     ctx["entry"] = entry
     ctx["generics"] = generics
+    ctx["upload_error"] = upload_error
     return _resp(request, "library_edit.html", ctx)
 
 

@@ -20,6 +20,7 @@ logging.basicConfig(
 )
 
 Path("data").mkdir(exist_ok=True)
+Path("data/uploads").mkdir(exist_ok=True)
 _GENERICS_DIR = Path("generics")
 _GENERICS_DIR.mkdir(exist_ok=True)
 _FONTS_DIR = Path("fonts")
@@ -40,6 +41,7 @@ app = FastAPI(title="FauxCable", lifespan=lifespan)
 
 app.mount("/generics", StaticFiles(directory=str(_GENERICS_DIR)), name="generics")
 app.mount("/fonts", StaticFiles(directory=str(_FONTS_DIR)), name="fonts")
+app.mount("/uploads", StaticFiles(directory="data/uploads"), name="uploads")
 
 app.include_router(epg_router)
 app.include_router(api_router)

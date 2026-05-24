@@ -106,7 +106,32 @@
       </p>
       {% endif %}
     </div>
-  </div>
 
+    <!-- Upload -->
+    <div class="mt-6 pt-5 border-t border-slate-700">
+      <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-3">Or upload your own</p>
+      {% if upload_error %}
+      <div class="bg-red-500/10 border border-red-500/30 text-red-400 rounded px-3 py-2 text-xs mb-3">
+        Invalid file — PNG, JPG, or WEBP images only.
+      </div>
+      {% endif %}
+      <form method="post" action="/api/upload-poster" enctype="multipart/form-data">
+        <input type="hidden" name="title_key" value="{{ entry.title_key }}">
+        <div class="flex items-center gap-2">
+          <input type="file" name="poster_file" accept="image/png,image/jpeg,image/webp"
+            class="flex-1 text-xs text-slate-400
+                   file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0
+                   file:bg-slate-700 file:text-slate-200 file:text-xs file:cursor-pointer
+                   hover:file:bg-slate-600 cursor-pointer">
+          <button type="submit"
+            class="shrink-0 text-xs bg-sky-500 hover:bg-sky-400 text-white px-3 py-1.5 rounded transition-colors">
+            Upload
+          </button>
+        </div>
+        <p class="text-xs text-slate-600 mt-2">PNG, JPG, or WEBP. Saved as a manual override.</p>
+      </form>
+    </div>
+
+  </div>
 </div>
 {% endblock %}

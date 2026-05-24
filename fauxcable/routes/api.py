@@ -1,8 +1,11 @@
+import io
+import re
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
-from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse
+from PIL import Image
 
 # ---------------------------------------------------------------------------
 # URL validation (SSRF defence)
@@ -95,6 +98,39 @@ async def save_override(
     # Empty response: on the matches page hx-swap="outerHTML" removes the
     # card from the DOM; on library-edit the caller redirects and ignores it.
     return HTMLResponse("")
+
+
+_UPLOADS_DIR = Path("data/uploads")
+_ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+
+
+@router.post("/upload-poster")
+async def upload_poster(
+    title_key: str = Form(...),
+    poster_file: UploadFile = File(...),
+):
+    suffix = Path(poster_file.filename or "").suffix.lower()
+    if suffix not in _ALLOWED_IMAGE_EXTS:
+        return RedirectResponse(f"/library/edit/{quote(title_key, safe='')}?upload_error=1", status_code=303)
+
+    content = await poster_file.read()
+    try:
+        # Open with Pillow: validates it's a real image and strips metadata
+        img = Image.open(io.BytesIO(content)).convert("RGB")
+    except Exception:
+        return RedirectResponse(f"/library/edit/{quote(title_key, safe='')}?upload_error=1", status_code=303)
+
+    _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    safe_key = re.sub(r"[^\w\-]", "_", title_key.strip())
+    filename = f"{safe_key}.png"
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    (_UPLOADS_DIR / filename).write_bytes(buf.getvalue())
+
+    cfg = get_config()
+    poster_url = f"{cfg.base_url}/uploads/{filename}"
+    await db.save_override(title_key, poster_url, "Uploaded", "manual")
+    return RedirectResponse("/library", status_code=303)
 
 
 @router.delete("/override/{title_key:path}")
