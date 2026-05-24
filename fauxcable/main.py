@@ -30,7 +30,7 @@ _FONTS_DIR.mkdir(exist_ok=True)
 async def lifespan(app: FastAPI):
     await init_db()
     cfg = get_config()
-    if cfg.dispatcharr_epg_url:
+    if cfg.epg_url:
         start_scheduler()
     yield
     stop_scheduler()

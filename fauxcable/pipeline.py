@@ -162,8 +162,8 @@ async def run_pipeline(cfg: Config) -> dict:
         })
 
         try:
-            logger.info("Fetching EPG from %s", cfg.dispatcharr_epg_url)
-            xml_bytes = await _fetch_epg(cfg.dispatcharr_epg_url)
+            logger.info("Fetching EPG from %s", cfg.epg_url)
+            xml_bytes = await _fetch_epg(cfg.epg_url)
 
             # Strip DOCTYPE if present — Python's XML parser can't handle XMLTV's DTD
             xml_bytes = re.sub(rb"<!DOCTYPE[^>]*>", b"", xml_bytes)

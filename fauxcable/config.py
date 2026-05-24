@@ -12,7 +12,7 @@ _LOCAL_PATH = Path("config.yaml")
 
 @dataclass
 class Config:
-    dispatcharr_epg_url: str = ""
+    epg_url: str = ""
     base_url: str = "http://localhost:8000"
     jellyfin_url: str = ""
     jellyfin_api_key: str = ""
@@ -26,8 +26,8 @@ class Config:
 
 
 def _apply_yaml(cfg: Config, data: dict) -> None:
-    if "dispatcharr_epg_url" in data:
-        cfg.dispatcharr_epg_url = data["dispatcharr_epg_url"]
+    if v := data.get("epg_url") or data.get("dispatcharr_epg_url"):
+        cfg.epg_url = v
     if "base_url" in data:
         cfg.base_url = data["base_url"].rstrip("/")
     jf = data.get("jellyfin", {})
@@ -54,8 +54,8 @@ def _apply_yaml(cfg: Config, data: dict) -> None:
 
 
 def _apply_env(cfg: Config) -> None:
-    if v := os.environ.get("DISPATCHARR_EPG_URL"):
-        cfg.dispatcharr_epg_url = v
+    if v := os.environ.get("EPG_URL") or os.environ.get("DISPATCHARR_EPG_URL"):
+        cfg.epg_url = v
     if v := os.environ.get("FAUXCABLE_BASE_URL"):
         cfg.base_url = v.rstrip("/")
     if v := os.environ.get("JELLYFIN_URL"):
@@ -114,8 +114,8 @@ def save_config(updates: dict):
         with open(_SETTINGS_PATH, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
-    if "dispatcharr_epg_url" in updates:
-        data["dispatcharr_epg_url"] = updates["dispatcharr_epg_url"]
+    if "epg_url" in updates:
+        data["epg_url"] = updates["epg_url"]
     if "base_url" in updates:
         data["base_url"] = updates["base_url"]
     if "jellyfin_url" in updates or "jellyfin_api_key" in updates:

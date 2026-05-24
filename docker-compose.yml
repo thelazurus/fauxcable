@@ -5,8 +5,8 @@ services:
       - "8000:8000"
     environment:
       # --- Required ---
-      # Your Dispatcharr EPG output URL
-      - DISPATCHARR_EPG_URL=http://your-dispatcharr-host/output/epg
+      # URL of your XMLTV/EPG source (Dispatcharr, Schedules Direct, etc.)
+      - EPG_URL=http://your-epg-source/output/epg.xml
       # FauxCable's own address — must be reachable by Jellyfin (not localhost)
       - FAUXCABLE_BASE_URL=http://your-server-ip:8000
       # Jellyfin connection

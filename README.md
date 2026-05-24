@@ -1,15 +1,15 @@
 # 📺 FauxCable
 
-A self-hosted EPG enrichment tool. Pulls your XMLTV guide data from [Dispatcharr](https://github.com/Dispatcharr/Dispatcharr), fetches poster art from TVMaze and TMDB, and serves the enriched feed at `/epg.xml` — ready for Jellyfin to consume directly.
+A self-hosted EPG enrichment tool. Pulls your XMLTV guide data from any XMLTV-compatible source, fetches poster art from TVMaze and TMDB, and serves the enriched feed at `/epg.xml` for your media server.
 
-Replaces the plain channel icons in your guide with proper show/movie poster art, with a web UI to manage matches, fix misidentified shows, and build generic fallback posters for categories like news, kids, and sports.
+Replaces plain channel icons in your guide with proper show/movie poster art, with a web UI to manage matches, fix misidentified shows, and build generic fallback posters for categories like news, kids, and sports.
 
 ---
 
 ## Features
 
 - **Auto-enrichment** — matches EPG programme titles to TVMaze (TV shows) and TMDB (movies), fetches poster URLs
-- **Scheduled pipeline** — runs on a configurable interval; Jellyfin refresh triggered automatically after each run
+- **Scheduled pipeline** — runs on a configurable interval; optional media server refresh trigger after each run
 - **Web UI** — dashboard, match queue, poster library, settings, generic builder
 - **Manual match queue** — review items that got a generic fallback, search TVMaze/TMDB, pin the correct poster
 - **Category filtering** — bulk-skip or bulk-fix by EPG category (news, kids, sports, etc.)
@@ -33,9 +33,9 @@ Replaces the plain channel icons in your guide with proper show/movie poster art
 
 ## Quick Start
 
-### Unraid / Docker Compose Manager
+### Docker Compose Manager
 
-The easiest deployment — no files to copy, no SSH required. Paste the compose below into your Compose Manager, fill in the five environment variables, and deploy.
+The easiest deployment — no files to copy, no SSH required. Paste the compose below into your Compose Manager, fill in the environment variables, and deploy.
 
 ```yaml
 services:
@@ -45,10 +45,14 @@ services:
       - "8000:8000"
     environment:
       # --- Required ---
-      - DISPATCHARR_EPG_URL=http://your-dispatcharr-host/output/epg
+      # URL of your XMLTV/EPG source (Dispatcharr, Schedules Direct, etc.)
+      - EPG_URL=http://your-epg-source/output/epg.xml
+      # FauxCable's own address — must be reachable by your media server (not localhost)
       - FAUXCABLE_BASE_URL=http://your-server-ip:8000
+      # Jellyfin connection (for automatic library refresh after each run)
       - JELLYFIN_URL=http://your-jellyfin-host:8096
       - JELLYFIN_API_KEY=your-jellyfin-api-key
+      # TMDB API key — https://www.themoviedb.org/settings/api
       - TMDB_API_KEY=your-tmdb-api-key
       # --- Optional ---
       # - SCHEDULE_INTERVAL_HOURS=6
@@ -63,7 +67,7 @@ services:
 ### Standard Docker
 
 ```bash
-# Download just the compose file
+# Download the compose file
 curl -O https://raw.githubusercontent.com/thelazurus/fauxcable/main/docker-compose.yml
 
 # Edit the environment variables
@@ -77,7 +81,7 @@ docker compose up -d --build
 
 1. Open `http://your-server-ip:8000`
 2. Hit **Run Now** on the dashboard to kick off the first pipeline
-3. In Jellyfin → Dashboard → Live TV → EPG sources, replace your Dispatcharr EPG URL with:
+3. In your media server's EPG settings, replace your current XMLTV source URL with:
    ```
    http://your-server-ip:8000/epg.xml
    ```
@@ -90,11 +94,11 @@ All configuration is set via environment variables in your compose file. No conf
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DISPATCHARR_EPG_URL` | ✅ | Your Dispatcharr EPG output URL |
-| `FAUXCABLE_BASE_URL` | ✅ | FauxCable's externally-reachable address — **must be reachable by Jellyfin**, not `localhost` |
-| `JELLYFIN_URL` | ✅ | Jellyfin internal URL |
-| `JELLYFIN_API_KEY` | ✅ | Jellyfin API key (Dashboard → API Keys) |
-| `TMDB_API_KEY` | ✅ | TMDB API key — [get one free](https://www.themoviedb.org/settings/api) |
+| `EPG_URL` | ✅ | Your XMLTV/EPG source URL |
+| `FAUXCABLE_BASE_URL` | ✅ | FauxCable's externally-reachable address — **must be reachable by your media server**, not `localhost` |
+| `JELLYFIN_URL` | — | Jellyfin URL for automatic library refresh after each run |
+| `JELLYFIN_API_KEY` | — | Jellyfin API key (Dashboard → API Keys) |
+| `TMDB_API_KEY` | — | TMDB API key — [get one free](https://www.themoviedb.org/settings/api) — enables movie poster lookup |
 | `SCHEDULE_INTERVAL_HOURS` | — | How often to re-run enrichment (default: `6`) |
 | `CONCURRENCY` | — | Parallel poster lookups per batch (default: `10`) |
 
@@ -133,7 +137,7 @@ Filenames must follow the pattern `generic_{category}.png` where `{category}` ma
 
 ## How It Works
 
-1. Fetches XMLTV from Dispatcharr over HTTP
+1. Fetches XMLTV from your configured EPG source over HTTP
 2. Bulk-loads the poster cache and manual overrides from SQLite into memory
 3. Processes all `<programme>` elements in parallel batches:
    - **Override** → uses your manually pinned poster
@@ -141,7 +145,7 @@ Filenames must follow the pattern `generic_{category}.png` where `{category}` ma
    - **TVMaze/TMDB lookup** → fetches, caches, uses
    - **Generic fallback** → uses `generic_{category}.png`, queues for manual review
 4. Writes enriched XMLTV to `data/enriched.xml`
-5. Triggers Jellyfin metadata refresh
+5. Triggers Jellyfin library refresh (if configured)
 6. Updates the match queue in the UI
 
 ---

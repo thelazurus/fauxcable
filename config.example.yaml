@@ -1,7 +1,7 @@
 # FauxCable configuration — copy to config.yaml and fill in your values
 
-# URL to your Dispatcharr EPG output endpoint
-dispatcharr_epg_url: "http://your-dispatcharr-host/output/epg"
+# URL of your XMLTV/EPG source (Dispatcharr, Schedules Direct, etc.)
+epg_url: "http://your-epg-source/output/epg.xml"
 
 # FauxCable's own externally-reachable URL (used to build generic poster URLs for Jellyfin)
 # Must be reachable by Jellyfin — use your server's LAN IP or hostname, not localhost

@@ -44,8 +44,8 @@ def next_run_time() -> str | None:
 
 async def _scheduled_run():
     cfg = get_config()
-    if not cfg.dispatcharr_epg_url:
-        logger.warning("Scheduled run skipped — dispatcharr_epg_url not set")
+    if not cfg.epg_url:
+        logger.warning("Scheduled run skipped — EPG source URL not set")
         return
     try:
         await run_pipeline(cfg)

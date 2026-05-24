@@ -37,7 +37,7 @@ async def dashboard(request: Request):
         "history": await db.list_runs(10),
         "run_status": get_run_status(),
         "next_run": next_run_time(),
-        "epg_configured": bool(cfg.dispatcharr_epg_url),
+        "epg_configured": bool(cfg.epg_url),
         "cfg_base_url": cfg.base_url,
     })
     return _resp(request, "index.html", ctx)

@@ -21,11 +21,11 @@
     <h2 class="text-sm font-semibold text-slate-300 mb-4">EPG Source</h2>
     <div class="space-y-4">
       <div>
-        <label class="block text-xs text-slate-400 mb-1">Dispatcharr EPG URL</label>
-        <input type="url" name="dispatcharr_epg_url" value="{{ cfg.dispatcharr_epg_url }}"
+        <label class="block text-xs text-slate-400 mb-1">EPG Source URL</label>
+        <input type="url" name="epg_url" value="{{ cfg.epg_url }}"
           class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500"
-          placeholder="http://dispatcharr-host/output/epg">
-        <p class="text-xs text-slate-500 mt-1">The XMLTV endpoint from Dispatcharr.</p>
+          placeholder="http://your-epg-source/output/epg.xml">
+        <p class="text-xs text-slate-500 mt-1">Any XMLTV-format URL — Dispatcharr, Schedules Direct, or similar.</p>
       </div>
       <div>
         <label class="block text-xs text-slate-400 mb-1">FauxCable base URL <span class="text-slate-500">(your own address)</span></label>

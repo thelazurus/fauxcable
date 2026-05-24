@@ -23,8 +23,8 @@ async def trigger_run(background_tasks: BackgroundTasks):
     if status.get("running"):
         raise HTTPException(status_code=409, detail="Pipeline already running")
     cfg = get_config()
-    if not cfg.dispatcharr_epg_url:
-        raise HTTPException(status_code=400, detail="dispatcharr_epg_url not configured")
+    if not cfg.epg_url:
+        raise HTTPException(status_code=400, detail="EPG source URL not configured")
     background_tasks.add_task(run_pipeline, cfg)
     return {"status": "started"}
 
