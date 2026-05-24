@@ -4,6 +4,8 @@ A self-hosted EPG enrichment tool. Pulls your XMLTV guide data from any XMLTV-co
 
 Replaces plain channel icons in your guide with proper show/movie poster art, with a web UI to manage matches, fix misidentified shows, and build generic fallback posters for categories like news, kids, and sports.
 
+> **EPG source compatibility** — FauxCable is designed and tested with [Dispatcharr](https://github.com/Dispatcharr/Dispatcharr) as the upstream EPG source, but should work with any standard XMLTV feed URL.
+
 ---
 
 ## Features
@@ -33,9 +35,9 @@ Replaces plain channel icons in your guide with proper show/movie poster art, wi
 
 ## Quick Start
 
-### Docker Compose Manager
+### Docker Compose
 
-The easiest deployment — no files to copy, no SSH required. Paste the compose below into your Compose Manager, fill in the environment variables, and deploy.
+Paste the compose below into your Docker Compose setup, fill in the environment variables, and deploy. No additional files required.
 
 ```yaml
 services:
@@ -64,7 +66,7 @@ services:
     restart: unless-stopped
 ```
 
-### Standard Docker
+### Standard Docker Compose
 
 ```bash
 # Download the compose file
