@@ -1,9 +1,8 @@
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # URL validation (SSRF defence)
@@ -83,17 +82,19 @@ async def list_overrides():
     return await db.list_overrides()
 
 
-class OverrideIn(BaseModel):
-    title_key: str
-    poster_url: str
-    match_name: str
-    match_source: str
-
-
 @router.post("/override")
-async def save_override(body: OverrideIn):
-    await db.save_override(body.title_key, body.poster_url, body.match_name, body.match_source)
-    return {"status": "ok"}
+async def save_override(
+    title_key: str = Form(...),
+    poster_url: str = Form(...),
+    match_name: str = Form(""),
+    match_source: str = Form("manual"),
+):
+    # hx-vals on <div> sends application/x-www-form-urlencoded, not JSON —
+    # Form() parameters parse correctly where `body: BaseModel` would 422.
+    await db.save_override(title_key, poster_url, match_name, match_source)
+    # Empty response: on the matches page hx-swap="outerHTML" removes the
+    # card from the DOM; on library-edit the caller redirects and ignores it.
+    return HTMLResponse("")
 
 
 @router.delete("/override/{title_key:path}")
