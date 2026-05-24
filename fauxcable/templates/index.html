@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — FauxCable{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold">Dashboard</h1>
+  <div class="flex items-center gap-3">
+    {% if next_run %}
+    <span class="text-xs text-slate-400">Next run: <span class="text-slate-300">{{ next_run[:16] | replace("T"," ") }}Z</span></span>
+    {% endif %}
+    <button
+      id="run-btn"
+      hx-post="/api/run"
+      hx-target="#run-status"
+      hx-swap="innerHTML"
+      hx-on::after-request="startPolling()"
+      class="bg-sky-500 hover:bg-sky-400 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors disabled:opacity-50"
+      {% if run_status.running %}disabled{% endif %}>
+      {% if run_status.running %}Running…{% else %}Run Now{% endif %}
+    </button>
+  </div>
+</div>
+
+{% if not epg_configured %}
+<div class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-lg px-4 py-3 text-sm mb-6">
+  ⚠ <strong>dispatcharr_epg_url</strong> is not set — visit <a href="/settings" class="underline">Settings</a> to configure it.
+</div>
+{% endif %}
+
+<!-- Stats row -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="bg-slate-800 rounded-xl p-5">
+    <p class="text-3xl font-bold text-white">{{ stats.cached | default(0) }}</p>
+    <p class="text-slate-400 text-sm mt-1">Cached posters</p>
+  </div>
+  <div class="bg-slate-800 rounded-xl p-5">
+    <p class="text-3xl font-bold text-white">{{ stats.overrides | default(0) }}</p>
+    <p class="text-slate-400 text-sm mt-1">Manual overrides</p>
+  </div>
+  <div class="bg-slate-800 rounded-xl p-5 {% if stats.unmatched > 0 %}ring-1 ring-yellow-500/40{% endif %}">
+    <p class="text-3xl font-bold {% if stats.unmatched > 0 %}text-yellow-400{% else %}text-white{% endif %}">
+      {{ stats.unmatched | default(0) }}
+    </p>
+    <p class="text-slate-400 text-sm mt-1">
+      Pending matches
+      {% if stats.unmatched > 0 %}
+      — <a href="/matches" class="text-yellow-400 hover:text-yellow-300 underline">review</a>
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<!-- Run status / progress -->
+<div id="run-status" class="mb-6">
+  {% if run_status.running %}
+  <div class="bg-slate-800 rounded-xl p-5">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium text-sky-400">Pipeline running…</span>
+      <span class="text-xs text-slate-400">
+        {{ run_status.done | default(0) }} / {{ run_status.total | default("?") }}
+      </span>
+    </div>
+    {% set done = run_status.done | default(0) %}
+    {% set total = run_status.total | default(1) %}
+    <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+      <div class="h-full bg-sky-500 rounded-full transition-all" style="width: {{ ((done / total) * 100) | int if total else 0 }}%"></div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- EPG URL -->
+<div class="bg-slate-800 rounded-xl p-5 mb-6">
+  <p class="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Your enriched EPG URL</p>
+  <div class="flex items-center gap-2">
+    <code class="flex-1 bg-slate-900 text-sky-300 text-sm px-3 py-2 rounded" id="epg-url">
+      {{ cfg_base_url if cfg_base_url else "http://your-host:8000" }}/epg.xml
+    </code>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('epg-url').innerText)"
+      class="text-xs text-slate-400 hover:text-slate-200 bg-slate-700 px-3 py-2 rounded">
+      Copy
+    </button>
+  </div>
+  <p class="text-xs text-slate-500 mt-2">Point Jellyfin's EPG source to this URL instead of Dispatcharr.</p>
+</div>
+
+<!-- Run history -->
+<div class="bg-slate-800 rounded-xl overflow-hidden">
+  <div class="px-5 py-3 border-b border-slate-700">
+    <h2 class="text-sm font-medium">Recent runs</h2>
+  </div>
+  {% if history %}
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs text-slate-500 uppercase tracking-wide border-b border-slate-700">
+        <th class="px-5 py-2 text-left">Started</th>
+        <th class="px-5 py-2 text-left">Status</th>
+        <th class="px-5 py-2 text-right">New</th>
+        <th class="px-5 py-2 text-right">Cache</th>
+        <th class="px-5 py-2 text-right">Generics</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in history %}
+      <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+        <td class="px-5 py-2.5 text-slate-300">{{ run.started_at[:16] | replace("T"," ") }}</td>
+        <td class="px-5 py-2.5">
+          {% if run.status == "success" %}
+          <span class="text-green-400">✓ success</span>
+          {% elif run.status == "running" %}
+          <span class="text-sky-400">running</span>
+          {% else %}
+          <span class="text-red-400">✗ {{ run.status }}</span>
+          {% endif %}
+        </td>
+        <td class="px-5 py-2.5 text-right text-slate-300">{{ run.stats.new_lookups if run.stats else "—" }}</td>
+        <td class="px-5 py-2.5 text-right text-slate-300">{{ run.stats.cache_hits if run.stats else "—" }}</td>
+        <td class="px-5 py-2.5 text-right {% if run.stats and run.stats.generics > 0 %}text-yellow-400{% else %}text-slate-300{% endif %}">
+          {{ run.stats.generics if run.stats else "—" }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="px-5 py-6 text-sm text-slate-500">No runs yet.</p>
+  {% endif %}
+</div>
+
+<script>
+  let pollTimer = null;
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(() => {
+      fetch('/api/status').then(r => r.json()).then(s => {
+        const btn = document.getElementById('run-btn');
+        if (s.running) {
+          btn.disabled = true;
+          btn.textContent = 'Running…';
+          const done = s.done || 0, total = s.total || 1;
+          document.getElementById('run-status').innerHTML = `
+            <div class="bg-slate-800 rounded-xl p-5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-sky-400">Pipeline running…</span>
+                <span class="text-xs text-slate-400">${done} / ${total}</span>
+              </div>
+              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-full bg-sky-500 rounded-full transition-all" style="width:${Math.round(done/total*100)}%"></div>
+              </div>
+            </div>`;
+        } else {
+          clearInterval(pollTimer); pollTimer = null;
+          btn.disabled = false;
+          btn.textContent = 'Run Now';
+          document.getElementById('run-status').innerHTML = '';
+          location.reload();
+        }
+      });
+    }, 2000);
+  }
+
+  {% if run_status.running %}startPolling();{% endif %}
+</script>
+{% endblock %}

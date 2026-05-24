@@ -1,0 +1,5 @@
+# Normalize line endings to LF on commit (Linux container target)
+* text=auto eol=lf
+*.png binary
+*.ttf binary
+*.otf binary

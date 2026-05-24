@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Generic Builder — FauxCable{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold">Generic Poster Builder</h1>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 items-start">
+
+  <!-- Form -->
+  <form id="builder-form">
+
+    <!-- Category + Label -->
+    <div class="grid grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Category Name</label>
+        <input type="text" id="category" name="category" placeholder="e.g. news"
+          class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200
+                 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+        <p class="text-xs text-slate-600 mt-1">Saves as <code class="text-slate-500">generic_{category}.png</code></p>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Label Text</label>
+        <input type="text" id="label" name="label" placeholder="Text shown on poster"
+          class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200
+                 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+      </div>
+    </div>
+
+    <!-- Background -->
+    <div class="mb-5">
+      <label class="block text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Background</label>
+      <div class="flex items-center gap-3 flex-wrap">
+        <input type="color" name="bg_color" value="#1e293b"
+          class="h-9 w-14 rounded border border-slate-700 bg-slate-800 cursor-pointer p-0.5">
+        <span class="text-xs text-slate-500">or upload an image</span>
+        <input type="file" name="bg_image" accept="image/*"
+          class="text-sm text-slate-400
+                 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0
+                 file:bg-slate-700 file:text-slate-300 file:text-sm file:cursor-pointer
+                 hover:file:bg-slate-600">
+      </div>
+    </div>
+
+    <!-- Blur -->
+    <div class="mb-5">
+      <div class="flex items-center justify-between mb-2">
+        <label class="text-xs text-slate-400 uppercase tracking-wide font-medium">Background Blur</label>
+        <span id="blur-val" class="text-xs text-slate-300">0</span>
+      </div>
+      <input type="range" name="blur_radius" min="0" max="20" value="0"
+        oninput="document.getElementById('blur-val').textContent = this.value"
+        class="w-full accent-sky-500">
+    </div>
+
+    <!-- Text options -->
+    <div class="grid grid-cols-3 gap-4 mb-5">
+      <div>
+        <label class="block text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Text Color</label>
+        <input type="color" name="text_color" value="#ffffff"
+          class="h-9 w-full rounded border border-slate-700 bg-slate-800 cursor-pointer p-0.5">
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-xs text-slate-400 uppercase tracking-wide font-medium">Font Size</label>
+          <span id="size-val" class="text-xs text-slate-300">40</span>
+        </div>
+        <input type="range" name="font_size" min="16" max="80" value="40"
+          oninput="document.getElementById('size-val').textContent = this.value"
+          class="w-full accent-sky-500 mt-2.5">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Position</label>
+        <select name="text_position"
+          class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm text-slate-200
+                 focus:outline-none focus:border-sky-500">
+          <option value="top">Top</option>
+          <option value="center" selected>Center</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Font -->
+    <div class="mb-6">
+      <label class="block text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Font</label>
+      <select name="font_name"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm text-slate-200
+               focus:outline-none focus:border-sky-500">
+        <option value="">Default (built-in)</option>
+        {% for f in fonts %}
+        <option value="{{ f }}">{{ f }}</option>
+        {% endfor %}
+      </select>
+      {% if not fonts %}
+      <p class="text-xs text-slate-600 mt-1">Upload a .ttf or .otf font below to enable custom fonts.</p>
+      {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3 flex-wrap">
+      <button type="button"
+        hx-post="/api/generics/preview"
+        hx-encoding="multipart/form-data"
+        hx-include="#builder-form"
+        hx-target="#preview-pane"
+        hx-swap="innerHTML"
+        class="bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium px-4 py-2 rounded transition-colors">
+        Preview
+      </button>
+      <button type="button"
+        hx-post="/api/generics/save"
+        hx-encoding="multipart/form-data"
+        hx-include="#builder-form"
+        hx-target="#save-status"
+        hx-swap="innerHTML"
+        class="bg-green-700 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded transition-colors">
+        Save
+      </button>
+      <span id="save-status" class="text-sm"></span>
+    </div>
+
+  </form>
+
+  <!-- Preview pane -->
+  <div>
+    <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-2">Preview</p>
+    <div class="w-full aspect-[2/3] bg-slate-800 rounded-xl ring-1 ring-slate-700 overflow-hidden">
+      <div id="preview-pane" class="w-full h-full flex items-center justify-center">
+        <span class="text-xs text-slate-600">Click Preview</span>
+      </div>
+    </div>
+    <p class="text-xs text-slate-600 mt-2">300 × 450 px</p>
+  </div>
+
+</div>
+
+<!-- Existing generics -->
+<div class="mt-10 pt-6 border-t border-slate-700">
+  <h2 class="text-base font-medium mb-4">Saved Generics</h2>
+  {% if generics %}
+  <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+    {% for g in generics %}
+    <div data-generic-card="1" class="relative group rounded-lg overflow-hidden ring-1 ring-slate-700 bg-slate-800">
+      <div class="aspect-[2/3] overflow-hidden">
+        <img src="{{ g.url }}" alt="{{ g.category }}" class="w-full h-full object-cover" loading="lazy">
+      </div>
+      <div class="px-1.5 py-1">
+        <p class="text-[10px] text-slate-400 truncate text-center">{{ g.category }}</p>
+      </div>
+      <button
+        class="absolute top-1 right-1 hidden group-hover:flex items-center justify-center
+               w-5 h-5 bg-red-500/80 hover:bg-red-500 rounded text-white text-[10px] leading-none"
+        title="Delete"
+        hx-delete="/api/generics/{{ g.category }}"
+        hx-target="closest [data-generic-card]"
+        hx-swap="outerHTML"
+        hx-confirm="Delete generic_{{ g.category }}.png?">
+        ✕
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-sm text-slate-500">No generics saved yet — build and save one above.</p>
+  {% endif %}
+</div>
+
+<!-- Font management -->
+<div class="mt-10 pt-6 border-t border-slate-700">
+  <h2 class="text-base font-medium mb-4">Uploaded Fonts</h2>
+
+  {% if font_error %}
+  <div class="bg-red-900/30 border border-red-700 rounded px-3 py-2 text-sm text-red-300 mb-4">
+    Invalid file — only .ttf and .otf fonts are accepted.
+  </div>
+  {% endif %}
+
+  <form action="/api/generics/fonts" method="post" enctype="multipart/form-data"
+    class="flex items-center gap-3 flex-wrap mb-5">
+    <input type="file" name="font_file" accept=".ttf,.otf"
+      class="text-sm text-slate-400
+             file:mr-3 file:py-1 file:px-3 file:rounded file:border-0
+             file:bg-slate-700 file:text-slate-300 file:text-sm file:cursor-pointer
+             hover:file:bg-slate-600">
+    <button type="submit"
+      class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm px-3 py-1.5 rounded transition-colors">
+      Upload Font
+    </button>
+  </form>
+
+  {% if fonts %}
+  <div class="space-y-1.5">
+    {% for f in fonts %}
+    <div class="flex items-center justify-between bg-slate-800 rounded px-3 py-2">
+      <span class="text-sm text-slate-300 font-mono">{{ f }}</span>
+      <button
+        class="text-slate-500 hover:text-red-400 text-xs transition-colors"
+        hx-delete="/api/generics/fonts/{{ f | urlencode }}"
+        hx-target="closest div"
+        hx-swap="outerHTML"
+        hx-confirm="Delete font {{ f }}?">
+        Remove
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-sm text-slate-500">
+    No fonts uploaded. The built-in Pillow font will be used.
+    For best results upload a .ttf such as
+    <a href="https://fonts.google.com/specimen/Inter" target="_blank"
+       class="text-sky-400 hover:underline">Inter</a> or
+    <a href="https://fonts.google.com/specimen/Roboto" target="_blank"
+       class="text-sky-400 hover:underline">Roboto</a>.
+  </p>
+  {% endif %}
+</div>
+
+<script>
+  const catEl = document.getElementById('category');
+  const lblEl = document.getElementById('label');
+  let lblEdited = false;
+  catEl.addEventListener('input', () => {
+    if (!lblEdited) lblEl.value = catEl.value;
+  });
+  lblEl.addEventListener('input', () => {
+    lblEdited = lblEl.value !== catEl.value;
+  });
+</script>
+
+{% endblock %}

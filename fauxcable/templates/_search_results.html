@@ -1,0 +1,32 @@
+{% if results %}
+{% for r in results %}
+<div
+  class="cursor-pointer group relative rounded overflow-hidden ring-1 ring-slate-700 hover:ring-sky-400 transition-all"
+  title="{{ r.name }}{% if r.year %} ({{ r.year }}){% endif %}"
+  hx-post="/api/override"
+  hx-vals='{"title_key": "{{ title_key }}", "poster_url": "{{ r.poster_url }}", "match_name": "{{ r.name | replace('"', '&quot;') }}", "match_source": "{{ r.type }}"}'
+  {% if redirect_to %}
+  hx-on::after-request="window.location.href='{{ redirect_to }}'"
+  {% else %}
+  hx-target="closest [data-item]"
+  hx-swap="outerHTML"
+  hx-confirm="Use &quot;{{ r.name }}&quot; for this item?"
+  {% endif %}
+>
+  <img
+    src="{{ r.poster_url }}"
+    alt="{{ r.name }}"
+    class="w-full aspect-[2/3] object-cover bg-slate-700"
+    loading="lazy"
+    onerror="this.parentElement.style.display='none'"
+  >
+  <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1
+              opacity-0 group-hover:opacity-100 transition-opacity">
+    <p class="text-xs text-white leading-tight truncate">{{ r.name }}</p>
+    {% if r.year %}<p class="text-xs text-slate-400">{{ r.year }}</p>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% elif results is defined %}
+<p class="text-xs text-slate-500 col-span-full self-center py-2">No results found.</p>
+{% endif %}

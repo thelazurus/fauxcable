@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Edit Match — FauxCable{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-2 mb-6 text-sm">
+  <a href="/library" class="text-slate-400 hover:text-slate-200 transition-colors">← Library</a>
+  <span class="text-slate-700">/</span>
+  <span class="text-slate-200 font-medium">{{ entry.title_key | title }}</span>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-8">
+
+  <!-- Current poster -->
+  <div>
+    <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-2">Current</p>
+    <div class="rounded-xl overflow-hidden ring-1 ring-slate-700 w-40">
+      <div class="aspect-[2/3] bg-slate-700">
+        <img
+          src="{{ entry.poster_url }}"
+          alt="{{ entry.title_key | title }}"
+          class="w-full h-full object-cover"
+          onerror="this.style.display='none'"
+        >
+      </div>
+    </div>
+    <div class="mt-2 w-40">
+      <span class="text-xs font-medium
+        {% if entry.source == 'tvmaze' %}text-sky-400
+        {% elif entry.source == 'tmdb' %}text-yellow-400
+        {% elif entry.source == 'manual' %}text-green-400
+        {% else %}text-slate-500{% endif %}">
+        {% if entry.source == 'tvmaze' %}TVMaze
+        {% elif entry.source == 'tmdb' %}TMDB
+        {% elif entry.source == 'manual' %}Manual
+        {% elif ':' in entry.source %}Generic: {{ entry.source.split(':')[1] }}
+        {% else %}Generic{% endif %}
+      </span>
+      <p class="text-xs text-slate-500 mt-0.5 break-all">{{ entry.updated_at[:10] }}</p>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div>
+    <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-2">Replace with</p>
+
+    <div class="flex gap-2 mb-4">
+      <select id="search-type"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm text-slate-200
+               focus:outline-none focus:border-sky-500">
+        <option value="show">TV Show</option>
+        <option value="movie">Movie</option>
+      </select>
+      <input
+        type="text"
+        id="search-q"
+        name="q"
+        placeholder="Search TVMaze / TMDB…"
+        value="{{ entry.title_key | title }}"
+        class="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200
+               placeholder-slate-500 focus:outline-none focus:border-sky-500"
+        hx-get="/search-results"
+        hx-trigger="keyup changed delay:450ms, load"
+        hx-target="#search-results"
+        hx-include="#search-type"
+        hx-vals='{"title_key": "{{ entry.title_key }}", "redirect_to": "/library"}'
+      >
+    </div>
+
+    <div id="search-results"
+      class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 min-h-[10rem]">
+      <span class="text-xs text-slate-600 col-span-full self-center">Searching…</span>
+    </div>
+
+    <p class="text-xs text-slate-600 mt-4">
+      Click a poster to save it as a manual override. It will be used on all future runs.
+    </p>
+
+    <!-- Generic options -->
+    <div class="mt-6 pt-5 border-t border-slate-700">
+      <p class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-3">Or assign a generic</p>
+      {% if generics %}
+      <div class="flex flex-wrap gap-2">
+        {% for g in generics %}
+        <div
+          class="cursor-pointer group relative rounded-lg overflow-hidden w-20
+                 ring-1 ring-slate-700 hover:ring-sky-400 transition-all"
+          title="Generic: {{ g.category }}"
+          hx-post="/api/override"
+          hx-vals='{"title_key": "{{ entry.title_key }}", "poster_url": "{{ g.url }}", "match_name": "Generic: {{ g.category }}", "match_source": "generic:{{ g.category }}"}'
+          hx-on::after-request="window.location.href='/library'"
+        >
+          <div class="aspect-[2/3] bg-slate-700 overflow-hidden">
+            <img src="{{ g.url }}" alt="{{ g.category }}"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
+          </div>
+          <div class="px-1 py-1 bg-slate-800">
+            <p class="text-[10px] text-slate-400 truncate text-center">{{ g.category }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-slate-600">
+        No generic images found in <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">generics/</code> yet.
+        Add <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">generic_{category}.png</code> files to enable this.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

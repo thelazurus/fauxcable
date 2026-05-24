@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Virtual environments
+.venv/
+.venv-win/
+
+# Config with secrets — commit config.example.yaml instead
+config.yaml
+
+# Runtime data (Docker volumes — keep the dirs, not the contents)
+data/*
+!data/.gitkeep
+logs/
+
+# Font files (binary, licensing concerns)
+fonts/*.ttf
+fonts/*.otf
+
+# IDE / tooling
+.claude/
+.vscode/
+.idea/
+
+# Leftover artifacts
+*.zip
+*.log
+*.log.*
+*.json
+generics_report.txt
+=*

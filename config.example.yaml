@@ -1,0 +1,23 @@
+# FauxCable configuration — copy to config.yaml and fill in your values
+
+# URL to your Dispatcharr EPG output endpoint
+dispatcharr_epg_url: "http://your-dispatcharr-host/output/epg"
+
+# FauxCable's own externally-reachable URL (used to build generic poster URLs for Jellyfin)
+# Must be reachable by Jellyfin — use your server's LAN IP or hostname, not localhost
+base_url: "http://your-server-ip:8000"
+
+jellyfin:
+  url: "http://your-jellyfin-host:8096"
+  api_key: "your-jellyfin-api-key"
+
+tmdb:
+  enabled: true
+  api_key: "your-tmdb-api-key"   # https://www.themoviedb.org/settings/api
+
+behavior:
+  schedule_interval_hours: 6     # How often to re-run the EPG enrichment pipeline
+  concurrency: 10                # Parallel poster lookups per batch
+  rate_limit_delay: 0.10         # Seconds between API calls
+  retry_attempts: 3
+  retry_delay: 2

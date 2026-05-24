@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Library — FauxCable{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-xl font-semibold">Poster Library</h1>
+  <span class="text-slate-500 text-sm">{{ total }} poster{{ 's' if total != 1 }}</span>
+</div>
+
+<!-- Source filter + search -->
+<div class="flex flex-wrap items-center gap-3 mb-5">
+  <div class="flex flex-wrap gap-1.5">
+    <a href="/library{% if search %}?search={{ search }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+              {% if not current_source %}bg-sky-500 text-white{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+      All
+    </a>
+    {% for s in sources %}
+    <a href="/library?source={{ s.source }}{% if search %}&search={{ search }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+              {% if current_source == s.source %}
+                {% if s.source == 'tvmaze' %}bg-sky-500/20 text-sky-300 ring-1 ring-sky-500
+                {% elif s.source == 'tmdb' %}bg-yellow-500/20 text-yellow-300 ring-1 ring-yellow-500
+                {% elif s.source == 'manual' %}bg-green-500/20 text-green-300 ring-1 ring-green-500
+                {% else %}bg-slate-600 text-slate-200 ring-1 ring-slate-500{% endif %}
+              {% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+      {% if s.source == 'tvmaze' %}TVMaze
+      {% elif s.source == 'tmdb' %}TMDB
+      {% elif s.source == 'manual' %}Manual
+      {% else %}Generic{% endif %}
+      <span class="opacity-60 ml-0.5">{{ s.count }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <form method="get" action="/library" class="ml-auto flex gap-2">
+    {% if current_source %}<input type="hidden" name="source" value="{{ current_source }}">{% endif %}
+    <input type="text" name="search" value="{{ search }}"
+      placeholder="Filter by title…"
+      class="bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200
+             placeholder-slate-500 focus:outline-none focus:border-sky-500 w-48">
+    <button type="submit"
+      class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm px-3 py-1.5 rounded transition-colors">
+      Search
+    </button>
+    {% if search %}
+    <a href="/library{% if current_source %}?source={{ current_source }}{% endif %}"
+       class="text-slate-500 hover:text-slate-300 text-sm py-1.5 px-1 leading-none">✕</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if not items %}
+<div class="bg-slate-800 rounded-xl px-6 py-12 text-center">
+  <p class="text-slate-400">No posters found{% if search %} for "{{ search }}"{% endif %}.</p>
+</div>
+{% else %}
+
+<div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 mb-6">
+  {% for item in items %}
+  <a href="/library/edit/{{ item.title_key | urlencode }}"
+     class="group block rounded-lg overflow-hidden ring-1 ring-slate-700 hover:ring-sky-400 transition-all bg-slate-800">
+    <div class="aspect-[2/3] bg-slate-700 overflow-hidden">
+      <img
+        src="{{ item.poster_url }}"
+        alt="{{ item.title_key | title }}"
+        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+        loading="lazy"
+        onerror="this.parentElement.classList.add('flex','items-center','justify-center'); this.style.display='none'; this.parentElement.insertAdjacentHTML('beforeend','<span class=\'text-slate-600 text-xs text-center px-1\'>No image</span>')"
+      >
+    </div>
+    <div class="px-1.5 py-1.5">
+      <p class="text-xs text-slate-300 truncate leading-tight mb-0.5">{{ item.title_key | title }}</p>
+      <span class="text-[10px] font-medium
+        {% if item.source == 'tvmaze' %}text-sky-400
+        {% elif item.source == 'tmdb' %}text-yellow-400
+        {% elif item.source == 'manual' %}text-green-400
+        {% else %}text-slate-600{% endif %}">
+        {% if item.source == 'tvmaze' %}TVMaze
+        {% elif item.source == 'tmdb' %}TMDB
+        {% elif item.source == 'manual' %}Manual
+        {% elif ':' in item.source %}Generic: {{ item.source.split(':')[1] }}
+        {% else %}Generic{% endif %}
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="flex items-center justify-center gap-3">
+  {% if page > 1 %}
+  <a href="/library?page={{ page - 1 }}{% if current_source %}&source={{ current_source }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+     class="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-sm rounded transition-colors">
+    ← Prev
+  </a>
+  {% endif %}
+  <span class="text-sm text-slate-400">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="/library?page={{ page + 1 }}{% if current_source %}&source={{ current_source }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+     class="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-sm rounded transition-colors">
+    Next →
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

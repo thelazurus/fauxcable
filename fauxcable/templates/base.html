@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}FauxCable{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: '#38bdf8' } } }
+    }
+  </script>
+  <style>
+    body { background-color: #0f172a; }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen font-sans antialiased">
+
+  <nav class="bg-slate-900 border-b border-slate-700/60 px-6 py-3 flex items-center gap-8">
+    <span class="text-base font-bold text-sky-400 tracking-tight">📺 FauxCable</span>
+    <a href="/"
+       class="text-sm transition-colors {% if active == 'dashboard' %}text-white font-medium{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+      Dashboard
+    </a>
+    <a href="/matches"
+       class="text-sm transition-colors flex items-center gap-1.5 {% if active == 'matches' %}text-white font-medium{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+      Matches
+      {% if unmatched_count > 0 %}
+      <span class="bg-yellow-400 text-slate-900 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+        {{ unmatched_count }}
+      </span>
+      {% endif %}
+    </a>
+    <a href="/library"
+       class="text-sm transition-colors {% if active == 'library' %}text-white font-medium{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+      Library
+    </a>
+    <a href="/generic-builder"
+       class="text-sm transition-colors {% if active == 'generics' %}text-white font-medium{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+      Generics
+    </a>
+    <a href="/settings"
+       class="text-sm transition-colors {% if active == 'settings' %}text-white font-medium{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+      Settings
+    </a>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-6 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+</body>
+</html>
