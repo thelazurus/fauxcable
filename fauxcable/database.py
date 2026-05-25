@@ -6,6 +6,12 @@ from pathlib import Path
 DB_PATH = Path("data/fauxcable.db")
 
 _SCHEMA = """
+CREATE TABLE IF NOT EXISTS category_map (
+    source      TEXT PRIMARY KEY,
+    target      TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS poster_cache (
     title_key   TEXT PRIMARY KEY,
     poster_url  TEXT NOT NULL,
@@ -299,3 +305,50 @@ async def get_summary_stats() -> dict:
         async with db.execute("SELECT COUNT(*) FROM unmatched") as c:
             unmatched = (await c.fetchone())[0]
     return {"cached": cached, "overrides": overrides, "unmatched": unmatched}
+
+
+# ---------------------------------------------------------------------------
+# Category alias map
+# ---------------------------------------------------------------------------
+
+async def load_category_map() -> dict[str, str]:
+    """Return {source_category: target_category} — loaded once per pipeline run."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT source, target FROM category_map") as cur:
+            return {r[0]: r[1] for r in await cur.fetchall()}
+
+
+async def list_category_aliases() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT source, target, created_at FROM category_map ORDER BY source"
+        ) as cur:
+            return [{"source": r[0], "target": r[1], "created_at": r[2]}
+                    for r in await cur.fetchall()]
+
+
+async def save_category_alias(source: str, target: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT OR REPLACE INTO category_map (source, target) VALUES (?,?)",
+            (source, target),
+        )
+        await db.commit()
+
+
+async def delete_category_alias(source: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM category_map WHERE source=?", (source,))
+        await db.commit()
+
+
+async def remap_generic_category(source: str, new_url: str, new_source: str):
+    """Immediately update poster_cache entries for *source* category so they
+    point to the aliased generic without waiting for the next pipeline run."""
+    now = _now()
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE poster_cache SET poster_url=?, source=?, updated_at=? WHERE source=?",
+            (new_url, new_source, now, f"generic:{source}"),
+        )
+        await db.commit()

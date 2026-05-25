@@ -16,6 +16,7 @@ from fauxcable.database import (
     bulk_save_unmatched,
     finish_run,
     load_cache_bulk,
+    load_category_map,
     load_overrides_bulk,
     start_run,
 )
@@ -105,6 +106,7 @@ async def _process_one(
     new_unmatched: list,
     cache_snap: dict,
     overrides_snap: dict,
+    alias_map: dict,
 ):
     title_raw = (prog.findtext("title") or "").strip()
     if not title_raw or prog.find("icon") is not None:
@@ -134,8 +136,10 @@ async def _process_one(
                 stats["new_lookups"] += 1
             else:
                 cat = _primary_category(prog)
-                poster_url = _generic_url(cat, cfg)
-                new_cache[key] = (poster_url, f"generic:{cat}")
+                # Apply category alias if one is configured (e.g. basketball→sports)
+                resolved = alias_map.get(cat, cat)
+                poster_url = _generic_url(resolved, cfg)
+                new_cache[key] = (poster_url, f"generic:{resolved}")
                 new_unmatched.append((key, title_raw, cat))
                 stats["generics"] += 1
 
@@ -176,6 +180,7 @@ async def run_pipeline(cfg: Config) -> dict:
 
             cache_snap = await load_cache_bulk()
             overrides_snap = await load_overrides_bulk()
+            alias_map = await load_category_map()
 
             sem = asyncio.Semaphore(cfg.concurrency)
             new_cache: dict[str, tuple[str, str]] = {}
@@ -185,7 +190,7 @@ async def run_pipeline(cfg: Config) -> dict:
             for start in range(0, total, batch_size):
                 batch = programmes[start:start + batch_size]
                 await asyncio.gather(*[
-                    _process_one(p, sem, cfg, stats, new_cache, new_unmatched, cache_snap, overrides_snap)
+                    _process_one(p, sem, cfg, stats, new_cache, new_unmatched, cache_snap, overrides_snap, alias_map)
                     for p in batch
                 ])
                 _run_status.update({"done": start + len(batch), "stats": dict(stats)})

@@ -46,6 +46,7 @@ async def generic_builder_page(request: Request, font_error: bool = False):
         "generics": _list_generics(),
         "fonts": list_fonts(),
         "font_error": font_error,
+        "aliases": await db.list_category_aliases(),
     }
     return _resp(request, "generic_builder.html", ctx)
 

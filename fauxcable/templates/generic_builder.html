@@ -167,6 +167,61 @@
   {% endif %}
 </div>
 
+<!-- Category Aliases -->
+<div class="mt-10 pt-6 border-t border-slate-700">
+  <h2 class="text-base font-medium mb-1">Category Aliases</h2>
+  <p class="text-xs text-slate-500 mb-5">
+    Route a category to an existing generic so you don't need a separate file for every variant.
+    e.g. <code class="text-slate-400">basketball → sports</code>,
+         <code class="text-slate-400">golf → sports</code>.
+    Items in aliased categories immediately use the target poster; the alias also applies on all future pipeline runs.
+  </p>
+
+  {% if aliases %}
+  <div class="bg-slate-800 rounded-xl overflow-hidden mb-5">
+    {% for a in aliases %}
+    <div data-alias class="flex items-center justify-between px-4 py-2.5 border-b border-slate-700/50 last:border-0">
+      <span class="text-sm">
+        <code class="text-slate-300">{{ a.source }}</code>
+        <span class="text-slate-600 mx-2">→</span>
+        <code class="text-sky-400">{{ a.target }}</code>
+      </span>
+      <button
+        hx-delete="/api/category-map/{{ a.source | urlencode }}"
+        hx-target="closest [data-alias]"
+        hx-swap="outerHTML"
+        class="text-xs text-slate-500 hover:text-red-400 transition-colors ml-4 shrink-0">
+        Remove
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if generics %}
+  <form hx-post="/api/category-map" hx-on::after-request="window.location.reload()" class="flex items-center gap-3 flex-wrap">
+    <input type="text" name="source" placeholder="source category  (e.g. basketball)"
+      required
+      class="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200
+             placeholder-slate-500 focus:outline-none focus:border-sky-500">
+    <span class="text-slate-600 text-sm shrink-0">→</span>
+    <select name="target"
+      class="bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200
+             focus:outline-none focus:border-sky-500">
+      {% for g in generics %}
+      <option value="{{ g.category }}">{{ g.category }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit"
+      class="bg-sky-600 hover:bg-sky-500 text-white text-sm px-4 py-1.5 rounded transition-colors shrink-0">
+      Add Alias
+    </button>
+  </form>
+  {% else %}
+  <p class="text-sm text-slate-500">No generic posters exist yet — build and save one above first.</p>
+  {% endif %}
+</div>
+
 <!-- Font management -->
 <div class="mt-10 pt-6 border-t border-slate-700">
   <h2 class="text-base font-medium mb-4">Uploaded Fonts</h2>

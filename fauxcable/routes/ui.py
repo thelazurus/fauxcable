@@ -50,16 +50,23 @@ async def matches_page(request: Request, category: str = ""):
     ctx["categories"] = await db.list_categories()
     ctx["current_category"] = category
 
-    # Determine which queue categories have no generic_{cat}.png file so the
-    # template can warn the user that those categories will serve broken images.
+    # Determine which queue categories have no generic and no alias.
     generics_dir = Path("generics")
     existing_generics = (
         {f.stem.replace("generic_", "") for f in generics_dir.glob("generic_*.png")}
         if generics_dir.exists() else set()
     )
-    ctx["missing_generics"] = {
-        cat["category"] for cat in ctx["categories"]
-    } - existing_generics
+    alias_map = await db.load_category_map()
+    ctx["missing_generics"] = (
+        {cat["category"] for cat in ctx["categories"]}
+        - existing_generics
+        - set(alias_map.keys())   # aliased categories are considered covered
+    )
+    # Available generics for the inline alias dropdown in the banner
+    ctx["generics"] = [
+        {"category": f.stem.replace("generic_", "")}
+        for f in sorted(generics_dir.glob("generic_*.png"))
+    ] if generics_dir.exists() else []
 
     return _resp(request, "matches.html", ctx)
 

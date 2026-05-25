@@ -139,6 +139,36 @@ async def delete_override(title_key: str):
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+# Category alias map
+# ---------------------------------------------------------------------------
+
+@router.get("/category-map")
+async def list_category_map():
+    return await db.list_category_aliases()
+
+
+@router.post("/category-map")
+async def save_category_map(source: str = Form(...), target: str = Form(...)):
+    source = source.strip().lower()
+    target = target.strip().lower()
+    await db.save_category_alias(source, target)
+    # Immediately remap cached entries so items reflect the alias without
+    # waiting for the next pipeline run
+    cfg = get_config()
+    new_url = f"{cfg.base_url}/generics/generic_{target}.png"
+    await db.remap_generic_category(source, new_url, f"generic:{target}")
+    return HTMLResponse("")
+
+
+@router.delete("/category-map/{source}")
+async def delete_category_map(source: str):
+    await db.delete_category_alias(source)
+    # Note: existing cache entries that were remapped are NOT reverted —
+    # they will re-resolve correctly on the next pipeline run.
+    return HTMLResponse("")
+
+
 @router.delete("/unmatched/all")
 async def dismiss_all():
     count = await db.dismiss_all()

@@ -26,16 +26,46 @@
 
 <!-- Missing generics warning -->
 {% if missing_generics %}
-<div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-lg px-4 py-3 text-sm mb-5 flex items-start gap-2">
-  <span class="shrink-0 mt-0.5">⚠</span>
-  <span>
-    No generic poster file for:
+<div class="bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-3 mb-5">
+  <div class="flex items-start gap-2 text-amber-300 text-sm {% if generics %}mb-3{% endif %}">
+    <span class="shrink-0 mt-0.5">⚠</span>
+    <span>
+      {% if generics %}
+        These categories have no generic — alias to an existing one below, or
+      {% else %}
+        These categories have no generic poster and none exist yet —
+      {% endif %}
+      <a href="/generic-builder" class="underline hover:text-amber-200">build them in the Generic Builder</a>.
+    </span>
+  </div>
+  {% if generics %}
+  <div class="space-y-2 ml-5">
     {% for cat in missing_generics | sort %}
-    <code class="bg-amber-900/30 px-1.5 py-0.5 rounded text-amber-200 mx-0.5">{{ cat }}</code>
+    <form hx-post="/api/category-map" hx-on::after-request="window.location.reload()" class="flex items-center gap-2 flex-wrap">
+      <input type="hidden" name="source" value="{{ cat }}">
+      <code class="bg-amber-900/30 px-1.5 py-0.5 rounded text-amber-200 text-xs shrink-0">{{ cat }}</code>
+      <span class="text-amber-600 text-xs shrink-0">→ use</span>
+      <select name="target"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200
+               focus:outline-none focus:border-sky-500">
+        {% for g in generics %}
+        <option value="{{ g.category }}">{{ g.category }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit"
+        class="text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-2 py-1 rounded transition-colors shrink-0">
+        Map
+      </button>
+    </form>
     {% endfor %}
-    — items in these categories will show a broken image until you build the poster.
-    <a href="/generic-builder" class="underline hover:text-amber-200 ml-1">Generic Builder →</a>
-  </span>
+  </div>
+  {% else %}
+  <div class="ml-5 flex flex-wrap gap-1.5 mt-1">
+    {% for cat in missing_generics | sort %}
+    <code class="bg-amber-900/30 px-1.5 py-0.5 rounded text-amber-200 text-xs">{{ cat }}</code>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 
