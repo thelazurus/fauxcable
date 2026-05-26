@@ -1,9 +1,12 @@
 from __future__ import annotations
 import base64
 import re
+import time
 from pathlib import Path
 from typing import Annotated, Optional
+from urllib.parse import quote as urlquote
 
+import aiohttp
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -11,6 +14,13 @@ from fastapi.templating import Jinja2Templates
 from fauxcable import database as db
 from fauxcable.config import get_config
 from fauxcable.poster_builder import list_fonts, render_poster
+
+_POLLINATIONS_URL = (
+    "https://image.pollinations.ai/prompt/{prompt}"
+    "?width=300&height=450&nologo=true&nofeed=true&model=flux"
+)
+_POLLINATIONS_COOLDOWN = 3.0  # seconds between requests — be polite to the free service
+_last_generate_time: float = 0.0
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -116,6 +126,41 @@ async def generics_save(
         f'<span class="text-green-400 text-sm">Saved as '
         f'<code class="bg-slate-700 px-1 rounded">generic_{safe_cat}.png</code></span>'
     )
+
+
+@router.post("/api/generics/generate", response_class=HTMLResponse)
+async def generics_generate(prompt: Annotated[str, Form()]):
+    global _last_generate_time
+    if not prompt.strip():
+        return HTMLResponse('<span class="text-red-400 text-sm">Enter a prompt first.</span>')
+
+    elapsed = time.monotonic() - _last_generate_time
+    if elapsed < _POLLINATIONS_COOLDOWN:
+        wait = int(_POLLINATIONS_COOLDOWN - elapsed) + 1
+        return HTMLResponse(
+            f'<span class="text-amber-400 text-sm">Please wait {wait}s before generating again.</span>'
+        )
+    _last_generate_time = time.monotonic()
+
+    url = _POLLINATIONS_URL.format(prompt=urlquote(prompt.strip(), safe=""))
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+                if resp.status != 200:
+                    return HTMLResponse(
+                        f'<span class="text-red-400 text-sm">Pollinations returned {resp.status}. Try again.</span>'
+                    )
+                content_type = resp.headers.get("content-type", "")
+                if "image" not in content_type:
+                    return HTMLResponse(
+                        '<span class="text-red-400 text-sm">Unexpected response from Pollinations. Try again.</span>'
+                    )
+                img_bytes = await resp.read()
+    except aiohttp.ClientError as exc:
+        return HTMLResponse(f'<span class="text-red-400 text-sm">Request failed: {exc}</span>')
+
+    b64 = base64.b64encode(img_bytes).decode()
+    return HTMLResponse(f'<img src="data:image/png;base64,{b64}" class="w-full h-full object-cover">')
 
 
 # font routes registered before /{category} to avoid shadowing
