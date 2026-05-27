@@ -10,6 +10,7 @@
 
   <!-- Form -->
   <form id="builder-form">
+    <input type="hidden" id="ai-generated-b64" name="ai_generated_b64" value="">
 
     <!-- Category + Label -->
     <div class="grid grid-cols-2 gap-4 mb-5">
@@ -36,6 +37,7 @@
           class="h-9 w-14 rounded border border-slate-700 bg-slate-800 cursor-pointer p-0.5">
         <span class="text-xs text-slate-500">or upload an image</span>
         <input type="file" name="bg_image" accept="image/*"
+          onchange="document.getElementById('ai-generated-b64').value = ''"
           class="text-sm text-slate-400
                  file:mr-3 file:py-1 file:px-3 file:rounded file:border-0
                  file:bg-slate-700 file:text-slate-300 file:text-sm file:cursor-pointer
@@ -336,8 +338,12 @@
 
   function aiGenerateEnd() {
     document.getElementById('ai-btn-label').textContent = 'Generate';
-    if (document.getElementById('preview-pane').querySelector('img')) {
+    const img = document.getElementById('preview-pane').querySelector('img');
+    if (img) {
       document.getElementById('ai-regenerate-btn').classList.remove('hidden');
+      const src = img.src;
+      document.getElementById('ai-generated-b64').value =
+        src.includes('base64,') ? src.split('base64,')[1] : '';
     }
   }
 </script>
