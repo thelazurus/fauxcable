@@ -23,6 +23,8 @@ class Config:
     rate_limit_delay: float = 0.10
     retry_attempts: int = 3
     retry_delay: int = 2
+    ai_provider: str = "together"  # "together" | "fal"
+    ai_api_key: str = ""
 
 
 def _apply_yaml(cfg: Config, data: dict) -> None:
@@ -40,6 +42,11 @@ def _apply_yaml(cfg: Config, data: dict) -> None:
         cfg.tmdb_enabled = tmdb["enabled"]
     if "api_key" in tmdb:
         cfg.tmdb_api_key = tmdb["api_key"]
+    ai = data.get("ai", {})
+    if "provider" in ai:
+        cfg.ai_provider = str(ai["provider"])
+    if "api_key" in ai:
+        cfg.ai_api_key = str(ai["api_key"])
     beh = data.get("behavior", {})
     if "schedule_interval_hours" in beh:
         cfg.schedule_interval_hours = float(beh["schedule_interval_hours"])
@@ -68,6 +75,10 @@ def _apply_env(cfg: Config) -> None:
         cfg.schedule_interval_hours = float(v)
     if v := os.environ.get("CONCURRENCY"):
         cfg.concurrency = int(v)
+    if v := os.environ.get("AI_PROVIDER"):
+        cfg.ai_provider = v
+    if v := os.environ.get("AI_API_KEY"):
+        cfg.ai_api_key = v
 
 
 def load_config() -> Config:
@@ -130,6 +141,12 @@ def save_config(updates: dict):
             tmdb["enabled"] = updates["tmdb_enabled"]
         if "tmdb_api_key" in updates:
             tmdb["api_key"] = updates["tmdb_api_key"]
+    if "ai_provider" in updates or "ai_api_key" in updates:
+        ai = data.setdefault("ai", {})
+        if "ai_provider" in updates:
+            ai["provider"] = updates["ai_provider"]
+        if "ai_api_key" in updates:
+            ai["api_key"] = updates["ai_api_key"]
     beh = data.setdefault("behavior", {})
     for key in ("schedule_interval_hours", "concurrency", "rate_limit_delay", "retry_attempts", "retry_delay"):
         if key in updates:

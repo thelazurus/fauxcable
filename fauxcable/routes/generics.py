@@ -19,10 +19,69 @@ from fauxcable.version import COMMIT_ID
 
 _POLLINATIONS_URL = (
     "https://image.pollinations.ai/prompt/{prompt}"
-    "?width=300&height=450&nologo=true&nofeed=true&model=flux"
+    "?width=512&height=768&nologo=true&nofeed=true&model=flux"
 )
-_POLLINATIONS_COOLDOWN = 3.0  # seconds between requests — be polite to the free service
+_TOGETHER_URL = "https://api.together.xyz/v1/images/generations"
+_FAL_URL = "https://fal.run/fal-ai/flux/schnell"
+_GENERATE_COOLDOWN = 3.0
 _last_generate_time: float = 0.0
+
+
+async def _fetch_pollinations(prompt: str) -> bytes:
+    url = _POLLINATIONS_URL.format(prompt=urlquote(prompt, safe=""))
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+            if resp.status != 200:
+                raise RuntimeError(f"Pollinations returned {resp.status}")
+            if "image" not in resp.headers.get("content-type", ""):
+                raise RuntimeError("Unexpected response from Pollinations")
+            return await resp.read()
+
+
+async def _fetch_together(prompt: str, api_key: str) -> bytes:
+    payload = {
+        "model": "black-forest-labs/FLUX.1-schnell-Free",
+        "prompt": prompt,
+        "width": 512,
+        "height": 768,
+        "steps": 4,
+        "n": 1,
+        "response_format": "b64_json",
+    }
+    headers = {"Authorization": f"Bearer {api_key}"}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            _TOGETHER_URL, json=payload, headers=headers,
+            timeout=aiohttp.ClientTimeout(total=60),
+        ) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"Together AI returned {resp.status}: {body[:120]}")
+            data = await resp.json()
+            return base64.b64decode(data["data"][0]["b64_json"])
+
+
+async def _fetch_fal(prompt: str, api_key: str) -> bytes:
+    payload = {
+        "prompt": prompt,
+        "image_size": {"width": 512, "height": 768},
+        "num_images": 1,
+        "output_format": "jpeg",
+    }
+    headers = {"Authorization": f"Key {api_key}"}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            _FAL_URL, json=payload, headers=headers,
+            timeout=aiohttp.ClientTimeout(total=60),
+        ) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"fal.ai returned {resp.status}: {body[:120]}")
+            data = await resp.json()
+            img_url = data["images"][0]["url"]
+        async with session.get(img_url, timeout=aiohttp.ClientTimeout(total=30)) as img_resp:
+            img_resp.raise_for_status()
+            return await img_resp.read()
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -54,6 +113,7 @@ def _list_generics() -> list[dict]:
 
 @router.get("/generic-builder", response_class=HTMLResponse)
 async def generic_builder_page(request: Request, font_error: bool = False):
+    cfg = get_config()
     ctx = {
         "active": "generics",
         "unmatched_count": await db.count_unmatched(),
@@ -61,6 +121,8 @@ async def generic_builder_page(request: Request, font_error: bool = False):
         "fonts": list_fonts(),
         "font_error": font_error,
         "aliases": await db.list_category_aliases(),
+        "ai_provider": cfg.ai_provider,
+        "ai_configured": bool(cfg.ai_api_key),
     }
     return _resp(request, "generic_builder.html", ctx)
 
@@ -142,33 +204,26 @@ async def generics_generate(prompt: Annotated[str, Form()]):
         return HTMLResponse('<span class="text-red-400 text-sm">Enter a prompt first.</span>')
 
     elapsed = time.monotonic() - _last_generate_time
-    if elapsed < _POLLINATIONS_COOLDOWN:
-        wait = int(_POLLINATIONS_COOLDOWN - elapsed) + 1
+    if elapsed < _GENERATE_COOLDOWN:
+        wait = int(_GENERATE_COOLDOWN - elapsed) + 1
         return HTMLResponse(
             f'<span class="text-amber-400 text-sm">Please wait {wait}s before generating again.</span>'
         )
     _last_generate_time = time.monotonic()
 
-    url = _POLLINATIONS_URL.format(prompt=urlquote(prompt.strip(), safe=""))
+    cfg = get_config()
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
-                if resp.status != 200:
-                    return HTMLResponse(
-                        f'<span class="text-red-400 text-sm">Pollinations returned {resp.status}. Try again.</span>'
-                    )
-                content_type = resp.headers.get("content-type", "")
-                if "image" not in content_type:
-                    return HTMLResponse(
-                        '<span class="text-red-400 text-sm">Unexpected response from Pollinations. Try again.</span>'
-                    )
-                img_bytes = await resp.read()
+        if cfg.ai_api_key:
+            if cfg.ai_provider == "fal":
+                img_bytes = await _fetch_fal(prompt.strip(), cfg.ai_api_key)
+            else:
+                img_bytes = await _fetch_together(prompt.strip(), cfg.ai_api_key)
+        else:
+            img_bytes = await _fetch_pollinations(prompt.strip())
     except asyncio.TimeoutError:
-        return HTMLResponse(
-            '<span class="text-red-400 text-sm">Pollinations timed out — try again.</span>'
-        )
-    except aiohttp.ClientError as exc:
-        return HTMLResponse(f'<span class="text-red-400 text-sm">Request failed: {exc}</span>')
+        return HTMLResponse('<span class="text-red-400 text-sm">Request timed out — try again.</span>')
+    except Exception as exc:
+        return HTMLResponse(f'<span class="text-red-400 text-sm">Generation failed: {exc}</span>')
 
     _AI_TEMP_FILE.parent.mkdir(parents=True, exist_ok=True)
     _AI_TEMP_FILE.write_bytes(img_bytes)
