@@ -30,6 +30,7 @@ templates.env.globals["commit_id"] = COMMIT_ID
 
 _GENERICS_DIR = Path("generics")
 _FONTS_DIR = Path("fonts")
+_AI_TEMP_FILE = Path("data/uploads/_ai_temp.png")
 _ALLOWED_FONT_EXTS = {".ttf", ".otf"}
 
 
@@ -73,14 +74,13 @@ async def generics_preview(
     font_name: Annotated[str, Form()] = "",
     font_size: Annotated[int, Form()] = 40,
     text_position: Annotated[str, Form()] = "center",
-    ai_generated_b64: Annotated[str, Form()] = "",
     bg_image: Optional[UploadFile] = File(default=None),
 ):
     bg_bytes = None
     if bg_image and bg_image.filename:
         bg_bytes = await bg_image.read()
-    elif ai_generated_b64:
-        bg_bytes = base64.b64decode(ai_generated_b64)
+    elif _AI_TEMP_FILE.exists():
+        bg_bytes = _AI_TEMP_FILE.read_bytes()
 
     png = render_poster(
         label=label,
@@ -106,7 +106,6 @@ async def generics_save(
     font_name: Annotated[str, Form()] = "",
     font_size: Annotated[int, Form()] = 40,
     text_position: Annotated[str, Form()] = "center",
-    ai_generated_b64: Annotated[str, Form()] = "",
     bg_image: Optional[UploadFile] = File(default=None),
 ):
     safe_cat = _safe_category(category)
@@ -116,8 +115,8 @@ async def generics_save(
     bg_bytes = None
     if bg_image and bg_image.filename:
         bg_bytes = await bg_image.read()
-    elif ai_generated_b64:
-        bg_bytes = base64.b64decode(ai_generated_b64)
+    elif _AI_TEMP_FILE.exists():
+        bg_bytes = _AI_TEMP_FILE.read_bytes()
 
     png = render_poster(
         label=label,
@@ -172,8 +171,13 @@ async def generics_generate(prompt: Annotated[str, Form()]):
     except aiohttp.ClientError as exc:
         return HTMLResponse(f'<span class="text-red-400 text-sm">Request failed: {exc}</span>')
 
-    b64 = base64.b64encode(img_bytes).decode()
-    return HTMLResponse(f'<img src="data:image/png;base64,{b64}" class="w-full h-full object-cover">')
+    _AI_TEMP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _AI_TEMP_FILE.write_bytes(img_bytes)
+
+    t = int(time.time())
+    response = HTMLResponse(f'<img src="/uploads/_ai_temp.png?t={t}" class="w-full h-full object-cover">')
+    response.headers["HX-Trigger"] = "showRegenerateBtn"
+    return response
 
 
 # font routes registered before /{category} to avoid shadowing
