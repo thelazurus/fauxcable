@@ -114,11 +114,23 @@
           hx-vals='js:{"prompt": document.getElementById("ai-prompt").value}'
           hx-target="#preview-pane"
           hx-swap="innerHTML"
-          hx-disabled-elt="this"
+          hx-disabled-elt="#ai-generate-btn, #ai-regenerate-btn"
           hx-on::htmx:before-request="aiGenerateStart()"
           hx-on::htmx:after-request="aiGenerateEnd()"
           class="bg-violet-700 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-wait text-white text-sm font-medium px-4 py-1.5 rounded transition-colors whitespace-nowrap">
           <span id="ai-btn-label">Generate</span>
+        </button>
+        <button type="button" id="ai-regenerate-btn"
+          hx-post="/api/generics/generate"
+          hx-vals='js:{"prompt": document.getElementById("ai-prompt").value}'
+          hx-target="#preview-pane"
+          hx-swap="innerHTML"
+          hx-disabled-elt="#ai-generate-btn, #ai-regenerate-btn"
+          hx-on::htmx:before-request="aiGenerateStart()"
+          hx-on::htmx:after-request="aiGenerateEnd()"
+          class="hidden bg-violet-900/60 hover:bg-violet-800 border border-violet-700 disabled:opacity-50 disabled:cursor-wait text-violet-300 text-sm font-medium px-3 py-1.5 rounded transition-colors"
+          title="Regenerate with same prompt">
+          ↻
         </button>
       </div>
       <p class="text-[11px] text-slate-600 mt-2">Image is fetched from <a href="https://pollinations.ai" target="_blank" rel="noopener" class="text-slate-500 hover:text-slate-400 underline">Pollinations.ai</a> — no API key needed. Generation takes ~5–15 s.</p>
@@ -324,6 +336,9 @@
 
   function aiGenerateEnd() {
     document.getElementById('ai-btn-label').textContent = 'Generate';
+    if (document.getElementById('preview-pane').querySelector('img')) {
+      document.getElementById('ai-regenerate-btn').classList.remove('hidden');
+    }
   }
 </script>
 
