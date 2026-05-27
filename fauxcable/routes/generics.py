@@ -130,10 +130,9 @@ async def generics_save(
     )
     _GENERICS_DIR.mkdir(exist_ok=True)
     (_GENERICS_DIR / f"generic_{safe_cat}.png").write_bytes(png)
-    return HTMLResponse(
-        f'<span class="text-green-400 text-sm">Saved as '
-        f'<code class="bg-slate-700 px-1 rounded">generic_{safe_cat}.png</code></span>'
-    )
+    response = HTMLResponse("")
+    response.headers["HX-Redirect"] = "/generic-builder"
+    return response
 
 
 @router.post("/api/generics/generate", response_class=HTMLResponse)
