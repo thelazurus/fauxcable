@@ -70,11 +70,14 @@ async def generics_preview(
     font_name: Annotated[str, Form()] = "",
     font_size: Annotated[int, Form()] = 40,
     text_position: Annotated[str, Form()] = "center",
+    ai_generated_b64: Annotated[str, Form()] = "",
     bg_image: Optional[UploadFile] = File(default=None),
 ):
     bg_bytes = None
     if bg_image and bg_image.filename:
         bg_bytes = await bg_image.read()
+    elif ai_generated_b64:
+        bg_bytes = base64.b64decode(ai_generated_b64)
 
     png = render_poster(
         label=label,
@@ -100,6 +103,7 @@ async def generics_save(
     font_name: Annotated[str, Form()] = "",
     font_size: Annotated[int, Form()] = 40,
     text_position: Annotated[str, Form()] = "center",
+    ai_generated_b64: Annotated[str, Form()] = "",
     bg_image: Optional[UploadFile] = File(default=None),
 ):
     safe_cat = _safe_category(category)
@@ -109,6 +113,8 @@ async def generics_save(
     bg_bytes = None
     if bg_image and bg_image.filename:
         bg_bytes = await bg_image.read()
+    elif ai_generated_b64:
+        bg_bytes = base64.b64decode(ai_generated_b64)
 
     png = render_poster(
         label=label,
