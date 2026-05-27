@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 from fauxcable import database as db
 from fauxcable.config import get_config
 from fauxcable.poster_builder import list_fonts, render_poster
+from fauxcable.version import COMMIT_ID
 
 _POLLINATIONS_URL = (
     "https://image.pollinations.ai/prompt/{prompt}"
@@ -25,6 +26,7 @@ _last_generate_time: float = 0.0
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates.env.globals["commit_id"] = COMMIT_ID
 
 _GENERICS_DIR = Path("generics")
 _FONTS_DIR = Path("fonts")

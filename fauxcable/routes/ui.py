@@ -12,8 +12,11 @@ from fauxcable.providers.tmdb import search_tmdb
 from fauxcable.providers.tvmaze import search_tvmaze
 from fauxcable.scheduler import next_run_time
 
+from fauxcable.version import COMMIT_ID
+
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates.env.globals["commit_id"] = COMMIT_ID
 
 
 def _resp(request: Request, name: str, ctx: dict):
