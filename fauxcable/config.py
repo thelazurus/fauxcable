@@ -23,7 +23,8 @@ class Config:
     rate_limit_delay: float = 0.10
     retry_attempts: int = 3
     retry_delay: int = 2
-    ai_provider: str = "together"  # "together" | "fal"
+    ai_provider: str = "cloudflare"  # "cloudflare" | "fal"
+    ai_account_id: str = ""          # Cloudflare Account ID (cloudflare provider only)
     ai_api_key: str = ""
 
 
@@ -45,6 +46,8 @@ def _apply_yaml(cfg: Config, data: dict) -> None:
     ai = data.get("ai", {})
     if "provider" in ai:
         cfg.ai_provider = str(ai["provider"])
+    if "account_id" in ai:
+        cfg.ai_account_id = str(ai["account_id"])
     if "api_key" in ai:
         cfg.ai_api_key = str(ai["api_key"])
     beh = data.get("behavior", {})
@@ -77,6 +80,8 @@ def _apply_env(cfg: Config) -> None:
         cfg.concurrency = int(v)
     if v := os.environ.get("AI_PROVIDER"):
         cfg.ai_provider = v
+    if v := os.environ.get("AI_ACCOUNT_ID"):
+        cfg.ai_account_id = v
     if v := os.environ.get("AI_API_KEY"):
         cfg.ai_api_key = v
 
@@ -141,10 +146,12 @@ def save_config(updates: dict):
             tmdb["enabled"] = updates["tmdb_enabled"]
         if "tmdb_api_key" in updates:
             tmdb["api_key"] = updates["tmdb_api_key"]
-    if "ai_provider" in updates or "ai_api_key" in updates:
+    if any(k in updates for k in ("ai_provider", "ai_account_id", "ai_api_key")):
         ai = data.setdefault("ai", {})
         if "ai_provider" in updates:
             ai["provider"] = updates["ai_provider"]
+        if "ai_account_id" in updates:
+            ai["account_id"] = updates["ai_account_id"]
         if "ai_api_key" in updates:
             ai["api_key"] = updates["ai_api_key"]
     beh = data.setdefault("behavior", {})

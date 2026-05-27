@@ -21,7 +21,7 @@ _POLLINATIONS_URL = (
     "https://image.pollinations.ai/prompt/{prompt}"
     "?width=512&height=768&nologo=true&nofeed=true&model=flux"
 )
-_TOGETHER_URL = "https://api.together.xyz/v1/images/generations"
+_CLOUDFLARE_URL = "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/black-forest-labs/flux-1-schnell"
 _FAL_URL = "https://fal.run/fal-ai/flux/schnell"
 _GENERATE_COOLDOWN = 3.0
 _last_generate_time: float = 0.0
@@ -38,27 +38,27 @@ async def _fetch_pollinations(prompt: str) -> bytes:
             return await resp.read()
 
 
-async def _fetch_together(prompt: str, api_key: str) -> bytes:
-    payload = {
-        "model": "black-forest-labs/FLUX.1-schnell-Free",
-        "prompt": prompt,
-        "width": 512,
-        "height": 768,
-        "steps": 4,
-        "n": 1,
-        "response_format": "b64_json",
-    }
-    headers = {"Authorization": f"Bearer {api_key}"}
+async def _fetch_cloudflare(prompt: str, account_id: str, api_token: str) -> bytes:
+    url = _CLOUDFLARE_URL.format(account_id=account_id)
+    headers = {"Authorization": f"Bearer {api_token}"}
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            _TOGETHER_URL, json=payload, headers=headers,
+            url, json={"prompt": prompt, "num_steps": 4}, headers=headers,
             timeout=aiohttp.ClientTimeout(total=60),
         ) as resp:
+            body = await resp.read()
             if resp.status != 200:
-                body = await resp.text()
-                raise RuntimeError(f"Together AI returned {resp.status}: {body[:120]}")
-            data = await resp.json()
-            return base64.b64decode(data["data"][0]["b64_json"])
+                # 4006 = daily free neuron quota exhausted (resets at midnight UTC)
+                try:
+                    err = (await resp.json()) if not body else __import__("json").loads(body)
+                    codes = [e.get("code") for e in err.get("errors", [])]
+                except Exception:
+                    codes = []
+                if 4006 in codes:
+                    raise RuntimeError("Daily Cloudflare quota reached — resets at midnight UTC")
+                raise RuntimeError(f"Cloudflare returned {resp.status}: {body[:120].decode(errors='replace')}")
+            data = __import__("json").loads(body)
+            return base64.b64decode(data["result"]["image"])
 
 
 async def _fetch_fal(prompt: str, api_key: str) -> bytes:
@@ -217,7 +217,11 @@ async def generics_generate(prompt: Annotated[str, Form()]):
             if cfg.ai_provider == "fal":
                 img_bytes = await _fetch_fal(prompt.strip(), cfg.ai_api_key)
             else:
-                img_bytes = await _fetch_together(prompt.strip(), cfg.ai_api_key)
+                if not cfg.ai_account_id:
+                    return HTMLResponse(
+                        '<span class="text-amber-400 text-sm">Cloudflare Account ID not set — check Settings.</span>'
+                    )
+                img_bytes = await _fetch_cloudflare(prompt.strip(), cfg.ai_account_id, cfg.ai_api_key)
         else:
             img_bytes = await _fetch_pollinations(prompt.strip())
     except asyncio.TimeoutError:

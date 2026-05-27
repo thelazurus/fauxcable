@@ -77,28 +77,36 @@
   <div class="bg-slate-800 rounded-xl p-5">
     <h2 class="text-sm font-semibold text-slate-300 mb-1">AI Image Generation</h2>
     <p class="text-xs text-slate-500 mb-4">Used by the Generic Poster Builder to generate backgrounds.</p>
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-2 gap-4 mb-3">
       <div>
         <label class="block text-xs text-slate-400 mb-1">Provider</label>
-        <select name="ai_provider"
+        <select name="ai_provider" id="ai_provider"
+          onchange="toggleAiAccountId(this.value)"
           class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500">
-          <option value="together" {% if cfg.ai_provider == 'together' %}selected{% endif %}>Together AI — free FLUX Schnell</option>
+          <option value="cloudflare" {% if cfg.ai_provider == 'cloudflare' %}selected{% endif %}>Cloudflare Workers AI — free FLUX Schnell</option>
           <option value="fal" {% if cfg.ai_provider == 'fal' %}selected{% endif %}>fal.ai — ~$0.003/image</option>
         </select>
       </div>
       <div>
-        <label class="block text-xs text-slate-400 mb-1">API Key</label>
+        <label class="block text-xs text-slate-400 mb-1">API Key / Token</label>
         <input type="password" name="ai_api_key" value="{{ cfg.ai_api_key }}"
           class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500"
           placeholder="Paste your key here">
       </div>
     </div>
-    <p class="text-xs text-slate-500 mt-3">
-      Get a free key at
-      <a href="https://api.together.ai" target="_blank" rel="noopener" class="text-sky-500 hover:underline">api.together.ai</a>
-      (Together AI) or
-      <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" class="text-sky-500 hover:underline">fal.ai/dashboard/keys</a>
-      (fal.ai).
+    <div id="ai-account-id-row" class="mb-3 {% if cfg.ai_provider == 'fal' %}hidden{% endif %}">
+      <label class="block text-xs text-slate-400 mb-1">Cloudflare Account ID</label>
+      <input type="text" name="ai_account_id" value="{{ cfg.ai_account_id }}"
+        class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500"
+        placeholder="Find this at dash.cloudflare.com → Workers AI">
+    </div>
+    <p class="text-xs text-slate-500">
+      Cloudflare: free account at
+      <a href="https://dash.cloudflare.com" target="_blank" rel="noopener" class="text-sky-500 hover:underline">dash.cloudflare.com</a>
+      — create an API token with Workers AI permission at
+      <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener" class="text-sky-500 hover:underline">API Tokens</a>.
+      fal.ai keys at
+      <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" class="text-sky-500 hover:underline">fal.ai/dashboard/keys</a>.
       Without a key, generation falls back to Pollinations.ai — free but unreliable.
     </p>
   </div>
@@ -140,6 +148,9 @@ function showSaved() {
   const el = document.getElementById('save-msg');
   el.classList.remove('hidden');
   setTimeout(() => el.classList.add('hidden'), 3000);
+}
+function toggleAiAccountId(provider) {
+  document.getElementById('ai-account-id-row').classList.toggle('hidden', provider !== 'cloudflare');
 }
 </script>
 
