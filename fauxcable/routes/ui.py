@@ -81,6 +81,11 @@ async def settings_page(request: Request):
     return _resp(request, "settings.html", ctx)
 
 
+@router.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    return _resp(request, "about.html", await _base_ctx("about"))
+
+
 _PER_PAGE = 60
 
 

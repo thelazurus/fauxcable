@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}About — FauxCable{% endblock %}
+{% block content %}
+
+<div class="max-w-2xl">
+
+  <div class="flex items-start justify-between mb-8">
+    <div>
+      <h1 class="text-xl font-semibold mb-1">About FauxCable</h1>
+      <p class="text-sm text-slate-400">Self-hosted EPG enrichment with poster art.</p>
+    </div>
+    <a href="https://github.com/thelazurus/fauxcable" target="_blank" rel="noopener"
+       class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 transition-colors">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+      </svg>
+      View on GitHub
+    </a>
+  </div>
+
+  <p class="text-sm text-slate-400 mb-10 leading-relaxed">
+    FauxCable was built entirely through conversational AI. It reads an XMLTV feed, enriches it
+    with poster art from TVMaze and TMDB, and serves the result at <code class="text-slate-300 bg-slate-800 px-1 rounded">/epg.xml</code>
+    for Jellyfin, Emby, and similar media servers.
+  </p>
+
+  <!-- Open Source -->
+  <h2 class="text-base font-medium mb-4">Open Source</h2>
+  <p class="text-xs text-slate-500 mb-5">FauxCable stands on the shoulders of these projects.</p>
+
+  <div class="space-y-1 mb-10">
+
+    {% set libs = [
+      ("FastAPI", "https://fastapi.tiangolo.com", "MIT", "Web framework"),
+      ("Uvicorn", "https://www.uvicorn.org", "BSD", "ASGI server"),
+      ("HTMX", "https://htmx.org", "0BSD", "Frontend interactivity"),
+      ("Tailwind CSS", "https://tailwindcss.com", "MIT", "Styling"),
+      ("Jinja2", "https://jinja.palletsprojects.com", "BSD-3", "HTML templating"),
+      ("aiohttp", "https://docs.aiohttp.org", "Apache 2.0", "Async HTTP client"),
+      ("aiosqlite", "https://aiosqlite.omnilib.dev", "MIT", "Async SQLite"),
+      ("APScheduler", "https://apscheduler.readthedocs.io", "MIT", "Background scheduling"),
+      ("Pillow", "https://python-pillow.org", "HPND", "Image processing"),
+      ("PyYAML", "https://pyyaml.org", "MIT", "Config parsing"),
+      ("python-multipart", "https://github.com/Kludex/python-multipart", "Apache 2.0", "Form data parsing"),
+    ] %}
+
+    {% for name, url, license, desc in libs %}
+    <div class="flex items-center justify-between bg-slate-800/60 rounded-lg px-4 py-2.5">
+      <div class="flex items-center gap-4">
+        <a href="{{ url }}" target="_blank" rel="noopener"
+           class="text-sm text-sky-400 hover:underline w-36 shrink-0">{{ name }}</a>
+        <span class="text-xs text-slate-500">{{ desc }}</span>
+      </div>
+      <span class="text-xs text-slate-600 font-mono">{{ license }}</span>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <!-- Data Sources -->
+  <h2 class="text-base font-medium mb-4">Data Sources</h2>
+  <div class="space-y-1 mb-10">
+    {% set sources = [
+      ("TVMaze", "https://tvmaze.com", "Free public API", "TV show metadata & posters"),
+      ("TMDB", "https://themoviedb.org", "Free API key required", "Movie metadata & posters"),
+      ("Cloudflare Workers AI", "https://developers.cloudflare.com/workers-ai/", "Free tier", "AI poster generation (FLUX)"),
+      ("fal.ai", "https://fal.ai", "Pay-per-use", "AI poster generation (FLUX)"),
+      ("Pollinations.ai", "https://pollinations.ai", "Free / no key", "AI poster generation fallback"),
+    ] %}
+    {% for name, url, tier, desc in sources %}
+    <div class="flex items-center justify-between bg-slate-800/60 rounded-lg px-4 py-2.5">
+      <div class="flex items-center gap-4">
+        <a href="{{ url }}" target="_blank" rel="noopener"
+           class="text-sm text-sky-400 hover:underline w-36 shrink-0">{{ name }}</a>
+        <span class="text-xs text-slate-500">{{ desc }}</span>
+      </div>
+      <span class="text-xs text-slate-600">{{ tier }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="text-xs text-slate-700">
+    FauxCable is released under the MIT licence.
+    <a href="https://github.com/thelazurus/fauxcable/blob/main/LICENSE" target="_blank" rel="noopener"
+       class="hover:text-slate-500 underline">View licence</a>.
+  </p>
+
+</div>
+
+{% endblock %}
