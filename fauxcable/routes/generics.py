@@ -180,6 +180,13 @@ async def generics_generate(prompt: Annotated[str, Form()]):
     return response
 
 
+@router.delete("/api/generics/ai-temp", response_class=HTMLResponse)
+async def clear_ai_temp():
+    if _AI_TEMP_FILE.exists():
+        _AI_TEMP_FILE.unlink()
+    return HTMLResponse("")
+
+
 # font routes registered before /{category} to avoid shadowing
 @router.post("/api/generics/fonts")
 async def upload_font(font_file: UploadFile = File(...)):

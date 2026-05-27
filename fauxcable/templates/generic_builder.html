@@ -132,6 +132,13 @@
           title="Regenerate with same prompt">
           ↻
         </button>
+        <button type="button" id="ai-clear-btn"
+          hx-delete="/api/generics/ai-temp"
+          hx-on::htmx:after-request="aiClearDone()"
+          class="hidden text-slate-500 hover:text-red-400 text-xs transition-colors px-1"
+          title="Remove AI background">
+          ✕ clear
+        </button>
       </div>
       <p class="text-[11px] text-slate-600 mt-2">Image is fetched from <a href="https://pollinations.ai" target="_blank" rel="noopener" class="text-slate-500 hover:text-slate-400 underline">Pollinations.ai</a> — no API key needed. Generation takes ~5–15 s.</p>
     </div>
@@ -338,8 +345,15 @@
     document.getElementById('ai-btn-label').textContent = 'Generate';
   }
 
+  function aiClearDone() {
+    document.getElementById('ai-regenerate-btn').classList.add('hidden');
+    document.getElementById('ai-clear-btn').classList.add('hidden');
+    document.getElementById('preview-pane').innerHTML = '<span class="text-xs text-slate-600">Click Preview</span>';
+  }
+
   document.body.addEventListener('showRegenerateBtn', function() {
     document.getElementById('ai-regenerate-btn').classList.remove('hidden');
+    document.getElementById('ai-clear-btn').classList.remove('hidden');
   });
 </script>
 
