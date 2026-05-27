@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import base64
 import re
 import time
@@ -162,6 +163,10 @@ async def generics_generate(prompt: Annotated[str, Form()]):
                         '<span class="text-red-400 text-sm">Unexpected response from Pollinations. Try again.</span>'
                     )
                 img_bytes = await resp.read()
+    except asyncio.TimeoutError:
+        return HTMLResponse(
+            '<span class="text-red-400 text-sm">Pollinations timed out — try again.</span>'
+        )
     except aiohttp.ClientError as exc:
         return HTMLResponse(f'<span class="text-red-400 text-sm">Request failed: {exc}</span>')
 

@@ -118,7 +118,7 @@
           hx-swap="innerHTML"
           hx-disabled-elt="#ai-generate-btn, #ai-regenerate-btn"
           hx-on::htmx:before-request="aiGenerateStart()"
-          hx-on::htmx:after-request="aiGenerateEnd()"
+          hx-on::htmx:after-swap="aiGenerateEnd()"
           class="bg-violet-700 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-wait text-white text-sm font-medium px-4 py-1.5 rounded transition-colors whitespace-nowrap">
           <span id="ai-btn-label">Generate</span>
         </button>
@@ -129,7 +129,7 @@
           hx-swap="innerHTML"
           hx-disabled-elt="#ai-generate-btn, #ai-regenerate-btn"
           hx-on::htmx:before-request="aiGenerateStart()"
-          hx-on::htmx:after-request="aiGenerateEnd()"
+          hx-on::htmx:after-swap="aiGenerateEnd()"
           class="hidden bg-violet-900/60 hover:bg-violet-800 border border-violet-700 disabled:opacity-50 disabled:cursor-wait text-violet-300 text-sm font-medium px-3 py-1.5 rounded transition-colors"
           title="Regenerate with same prompt">
           ↻
@@ -339,11 +339,13 @@
   function aiGenerateEnd() {
     document.getElementById('ai-btn-label').textContent = 'Generate';
     const img = document.getElementById('preview-pane').querySelector('img');
+    const b64Field = document.getElementById('ai-generated-b64');
     if (img) {
       document.getElementById('ai-regenerate-btn').classList.remove('hidden');
       const src = img.src;
-      document.getElementById('ai-generated-b64').value =
-        src.includes('base64,') ? src.split('base64,')[1] : '';
+      b64Field.value = src.includes('base64,') ? src.split('base64,')[1] : '';
+    } else {
+      b64Field.value = '';
     }
   }
 </script>
