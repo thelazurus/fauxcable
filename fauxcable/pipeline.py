@@ -138,8 +138,16 @@ async def _process_one(
                 cat = _primary_category(prog)
                 # Apply category alias if one is configured (e.g. basketball→sports)
                 resolved = alias_map.get(cat, cat)
-                poster_url = _generic_url(resolved, cfg)
-                new_cache[key] = (poster_url, f"generic:{resolved}")
+                generic_file = Path("generics") / f"generic_{resolved}.png"
+                if generic_file.exists():
+                    poster_url = _generic_url(resolved, cfg)
+                    new_cache[key] = (poster_url, f"generic:{resolved}")
+                elif cfg.default_poster_url:
+                    poster_url = cfg.default_poster_url
+                    new_cache[key] = (poster_url, "default")
+                else:
+                    poster_url = _generic_url(resolved, cfg)
+                    new_cache[key] = (poster_url, f"generic:{resolved}")
                 new_unmatched.append((key, title_raw, cat))
                 stats["generics"] += 1
 

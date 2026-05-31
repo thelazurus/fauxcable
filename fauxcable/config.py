@@ -26,6 +26,7 @@ class Config:
     ai_provider: str = "cloudflare"  # "cloudflare" | "fal"
     ai_account_id: str = ""          # Cloudflare Account ID (cloudflare provider only)
     ai_api_key: str = ""
+    default_poster_url: str = ""     # Fallback poster when no category generic exists
 
 
 def _apply_yaml(cfg: Config, data: dict) -> None:
@@ -50,6 +51,8 @@ def _apply_yaml(cfg: Config, data: dict) -> None:
         cfg.ai_account_id = str(ai["account_id"])
     if "api_key" in ai:
         cfg.ai_api_key = str(ai["api_key"])
+    if v := data.get("default_poster_url"):
+        cfg.default_poster_url = str(v)
     beh = data.get("behavior", {})
     if "schedule_interval_hours" in beh:
         cfg.schedule_interval_hours = float(beh["schedule_interval_hours"])
@@ -154,6 +157,8 @@ def save_config(updates: dict):
             ai["account_id"] = updates["ai_account_id"]
         if "ai_api_key" in updates:
             ai["api_key"] = updates["ai_api_key"]
+    if "default_poster_url" in updates:
+        data["default_poster_url"] = updates["default_poster_url"]
     beh = data.setdefault("behavior", {})
     for key in ("schedule_interval_hours", "concurrency", "rate_limit_delay", "retry_attempts", "retry_delay"):
         if key in updates:

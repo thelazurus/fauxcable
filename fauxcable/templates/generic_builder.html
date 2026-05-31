@@ -202,17 +202,41 @@
 
 <!-- Existing generics -->
 <div class="mt-10 pt-6 border-t border-slate-700">
-  <h2 class="text-base font-medium mb-4">Saved Generics</h2>
+  <div class="flex items-center gap-3 mb-4">
+    <h2 class="text-base font-medium">Saved Generics</h2>
+    {% if default_poster_url %}
+    <span class="text-xs text-yellow-400/80 flex items-center gap-1">
+      <span>★</span>
+      <span class="text-slate-400">
+        Fallback: <code class="text-yellow-300">{{ default_poster_url.split('generic_')[1].replace('.png','') if 'generic_' in default_poster_url else default_poster_url }}</code>
+      </span>
+    </span>
+    {% endif %}
+  </div>
   {% if generics %}
   <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
     {% for g in generics %}
-    <div data-generic-card="1" class="relative group rounded-lg overflow-hidden ring-1 ring-slate-700 bg-slate-800">
+    {% set is_default = g.url == default_poster_url %}
+    <div data-generic-card="1" class="relative group rounded-lg overflow-hidden ring-1 {% if is_default %}ring-yellow-500/60{% else %}ring-slate-700{% endif %} bg-slate-800">
       <div class="aspect-[2/3] overflow-hidden">
         <img src="{{ g.url }}" alt="{{ g.category }}" class="w-full h-full object-cover" loading="lazy">
       </div>
       <div class="px-1.5 py-1">
         <p class="text-[10px] text-slate-400 truncate text-center">{{ g.category }}</p>
       </div>
+      <!-- Set/unset default fallback -->
+      <button
+        hx-post="/api/generics/toggle-default"
+        hx-vals='{"category": "{{ g.category }}"}'
+        hx-on::after-request="window.location.href='/generic-builder'"
+        title="{% if is_default %}Remove as default fallback{% else %}Set as default fallback{% endif %}"
+        class="absolute top-1 left-1 flex items-center justify-center
+               w-5 h-5 rounded text-[11px] leading-none transition-all
+               {% if is_default %}text-yellow-400 bg-yellow-900/60
+               {% else %}text-slate-600 bg-slate-900/60 opacity-0 group-hover:opacity-100{% endif %}">
+        ★
+      </button>
+      <!-- Delete -->
       <button
         class="absolute top-1 right-1 hidden group-hover:flex items-center justify-center
                w-5 h-5 bg-red-500/80 hover:bg-red-500 rounded text-white text-[10px] leading-none"

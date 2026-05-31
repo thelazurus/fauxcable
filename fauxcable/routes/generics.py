@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from fauxcable import database as db
-from fauxcable.config import get_config
+from fauxcable.config import get_config, save_config
 from fauxcable.poster_builder import list_fonts, render_poster
 from fauxcable.version import COMMIT_ID
 
@@ -123,6 +123,7 @@ async def generic_builder_page(request: Request, font_error: bool = False):
         "aliases": await db.list_category_aliases(),
         "ai_provider": cfg.ai_provider,
         "ai_configured": bool(cfg.ai_api_key),
+        "default_poster_url": cfg.default_poster_url,
     }
     return _resp(request, "generic_builder.html", ctx)
 
@@ -263,6 +264,18 @@ async def delete_font(name: str):
     if path.exists() and path.suffix.lower() in _ALLOWED_FONT_EXTS:
         path.unlink()
     return HTMLResponse("")
+
+
+@router.post("/api/generics/toggle-default", response_class=HTMLResponse)
+async def toggle_default_generic(category: str = Form(...)):
+    cfg = get_config()
+    safe_cat = _safe_category(category)
+    url = f"{cfg.base_url}/generics/generic_{safe_cat}.png"
+    new_url = "" if cfg.default_poster_url == url else url
+    save_config({"default_poster_url": new_url})
+    response = HTMLResponse("")
+    response.headers["HX-Redirect"] = "/generic-builder"
+    return response
 
 
 @router.delete("/api/generics/{category}", response_class=HTMLResponse)
