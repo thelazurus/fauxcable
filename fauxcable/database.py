@@ -122,6 +122,24 @@ async def save_override(title_key: str, poster_url: str, match_name: str, match_
         await db.commit()
 
 
+async def bulk_save_override(title_keys: list[str], poster_url: str, match_name: str, match_source: str):
+    now = _now()
+    async with aiosqlite.connect(DB_PATH) as db:
+        for key in title_keys:
+            await db.execute(
+                """INSERT OR REPLACE INTO manual_overrides
+                   (title_key, poster_url, match_name, match_source, created_at)
+                   VALUES (?,?,?,?,?)""",
+                (key, poster_url, match_name, match_source, now),
+            )
+            await db.execute(
+                "INSERT OR REPLACE INTO poster_cache (title_key, poster_url, source, updated_at) VALUES (?,?,?,?)",
+                (key, poster_url, "manual", now),
+            )
+            await db.execute("DELETE FROM unmatched WHERE title_key=?", (key,))
+        await db.commit()
+
+
 async def delete_override(title_key: str):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("DELETE FROM manual_overrides WHERE title_key=?", (title_key,))

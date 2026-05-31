@@ -93,6 +93,11 @@ _PER_PAGE = 60
 async def library_page(request: Request, source: str = "", search: str = "", page: int = 1):
     offset = (page - 1) * _PER_PAGE
     total = await db.count_cache(source or None, search or None)
+    cfg = get_config()
+    generics = [
+        {"category": f.stem.replace("generic_", ""), "url": f"{cfg.base_url}/generics/{f.name}"}
+        for f in sorted(Path("generics").glob("generic_*.png"))
+    ] if Path("generics").exists() else []
     ctx = await _base_ctx("library")
     ctx.update({
         "items": await db.list_cache(_PER_PAGE, offset, source or None, search or None),
@@ -102,6 +107,7 @@ async def library_page(request: Request, source: str = "", search: str = "", pag
         "page": page,
         "current_source": source,
         "search": search,
+        "generics": generics,
     })
     return _resp(request, "library.html", ctx)
 

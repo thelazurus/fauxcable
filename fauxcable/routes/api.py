@@ -100,6 +100,21 @@ async def save_override(
     return HTMLResponse("")
 
 
+@router.post("/override/batch", response_class=HTMLResponse)
+async def batch_override(request: Request):
+    form = await request.form()
+    title_keys = form.getlist("title_keys")
+    poster_url = form.get("poster_url", "").strip()
+    match_name = form.get("match_name", "").strip()
+    match_source = form.get("match_source", "manual").strip()
+    if not title_keys or not poster_url:
+        return HTMLResponse('<span class="text-red-400 text-sm">Select items and a generic first.</span>', status_code=400)
+    await db.bulk_save_override(title_keys, poster_url, match_name, match_source)
+    response = HTMLResponse("")
+    response.headers["HX-Redirect"] = "/library"
+    return response
+
+
 _UPLOADS_DIR = Path("data/uploads")
 _ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 
