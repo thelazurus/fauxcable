@@ -20,7 +20,7 @@ from fauxcable.database import (
     load_overrides_bulk,
     start_run,
 )
-from fauxcable.providers.tmdb import lookup_tmdb_poster
+from fauxcable.providers.tmdb import lookup_tmdb_poster, lookup_tmdb_tv_poster
 from fauxcable.providers.tvmaze import lookup_tvmaze_poster
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ def _generic_url(cat: str, cfg: Config) -> str:
 async def _lookup_poster(title: str, is_movie: bool, cfg: Config) -> Optional[str]:
     if is_movie:
         return await lookup_tmdb_poster(title, cfg) or await lookup_tvmaze_poster(title, cfg)
-    return await lookup_tvmaze_poster(title, cfg) or await lookup_tmdb_poster(title, cfg)
+    return await lookup_tvmaze_poster(title, cfg) or await lookup_tmdb_tv_poster(title, cfg)
 
 
 async def _process_one(

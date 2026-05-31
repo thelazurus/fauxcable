@@ -1,3 +1,4 @@
+import asyncio
 import io
 import re
 from pathlib import Path
@@ -31,7 +32,7 @@ def _validate_url(value: str, field: str) -> None:
 from fauxcable import database as db
 from fauxcable.config import get_config, save_config
 from fauxcable.pipeline import get_run_status, run_pipeline
-from fauxcable.providers.tmdb import search_tmdb
+from fauxcable.providers.tmdb import search_tmdb, search_tmdb_tv
 from fauxcable.providers.tvmaze import search_tvmaze
 from fauxcable.scheduler import next_run_time, reschedule
 
@@ -231,7 +232,9 @@ async def search(q: str, type: str = "show"):
     cfg = get_config()
     if type == "movie":
         return await search_tmdb(q, cfg)
-    return await search_tvmaze(q, cfg)
+    tvmaze, tmdb_tv = await asyncio.gather(search_tvmaze(q, cfg), search_tmdb_tv(q, cfg))
+    seen_names = {r["name"].lower() for r in tvmaze}
+    return tvmaze + [r for r in tmdb_tv if r["name"].lower() not in seen_names]
 
 
 # ---------------------------------------------------------------------------

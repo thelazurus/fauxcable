@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, Request
@@ -8,7 +9,7 @@ from pathlib import Path
 from fauxcable import database as db
 from fauxcable.config import get_config
 from fauxcable.pipeline import get_run_status
-from fauxcable.providers.tmdb import search_tmdb
+from fauxcable.providers.tmdb import search_tmdb, search_tmdb_tv
 from fauxcable.providers.tvmaze import search_tvmaze
 from fauxcable.scheduler import next_run_time
 
@@ -144,7 +145,12 @@ async def search_results(
     cfg = get_config()
     results = []
     if q and len(q) >= 2:
-        results = await search_tmdb(q, cfg) if type == "movie" else await search_tvmaze(q, cfg)
+        if type == "movie":
+            results = await search_tmdb(q, cfg)
+        else:
+            tvmaze, tmdb_tv = await asyncio.gather(search_tvmaze(q, cfg), search_tmdb_tv(q, cfg))
+            seen_names = {r["name"].lower() for r in tvmaze}
+            results = tvmaze + [r for r in tmdb_tv if r["name"].lower() not in seen_names]
     return _resp(request, "_search_results.html", {
         "results": results,
         "title_key": title_key,
