@@ -65,9 +65,10 @@ async def matches_page(request: Request, category: str = ""):
         - existing_generics
         - set(alias_map.keys())   # aliased categories are considered covered
     )
-    # Available generics for the inline alias dropdown in the banner
+    # Available generics for the inline alias dropdown in the banner and batch assign
+    cfg = get_config()
     ctx["generics"] = [
-        {"category": f.stem.replace("generic_", "")}
+        {"category": f.stem.replace("generic_", ""), "url": f"{cfg.base_url}/generics/{f.name}"}
         for f in sorted(generics_dir.glob("generic_*.png"))
     ] if generics_dir.exists() else []
 

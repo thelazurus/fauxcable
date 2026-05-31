@@ -184,6 +184,18 @@ async def delete_category_map(source: str):
     return HTMLResponse("")
 
 
+@router.post("/unmatched/batch-dismiss", response_class=HTMLResponse)
+async def batch_dismiss(request: Request):
+    form = await request.form()
+    title_keys = form.getlist("title_keys")
+    if not title_keys:
+        return HTMLResponse('<span class="text-red-400 text-sm">No items selected.</span>', status_code=400)
+    await db.batch_dismiss_unmatched(list(title_keys))
+    response = HTMLResponse("")
+    response.headers["HX-Redirect"] = "/matches"
+    return response
+
+
 @router.delete("/unmatched/all")
 async def dismiss_all():
     count = await db.dismiss_all()

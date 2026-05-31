@@ -172,6 +172,19 @@ async def dismiss_unmatched(title_key: str):
         await db.commit()
 
 
+async def batch_dismiss_unmatched(title_keys: list[str]) -> int:
+    """Dismiss a specific set of items from the review queue. Returns count removed."""
+    if not title_keys:
+        return 0
+    placeholders = ",".join("?" * len(title_keys))
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            f"DELETE FROM unmatched WHERE title_key IN ({placeholders})", title_keys
+        )
+        await db.commit()
+        return cur.rowcount
+
+
 async def dismiss_category(category: str) -> int:
     """Dismiss all unmatched items in a category. Returns count dismissed."""
     async with aiosqlite.connect(DB_PATH) as db:

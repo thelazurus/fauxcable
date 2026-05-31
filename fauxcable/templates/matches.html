@@ -119,6 +119,35 @@
 </div>
 {% endif %}
 
+<!-- Batch action bar -->
+<div id="batch-bar" class="hidden mb-4 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+  <span id="batch-count" class="text-sm text-slate-300 font-medium">0 selected</span>
+  <button type="button" onclick="clearSelection()"
+    class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Clear</button>
+  <button type="button" onclick="selectAll()"
+    class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Select all</button>
+  <div class="ml-auto flex items-center gap-3 flex-wrap">
+    {% if generics %}
+    <select id="batch-generic-select"
+      class="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+      <option value="">— assign a generic —</option>
+      {% for g in generics %}
+      <option value="{{ g.url }}" data-category="{{ g.category }}">{{ g.category }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="applyBatchGeneric()"
+      class="bg-slate-600 hover:bg-slate-500 text-white text-sm font-medium px-3 py-1.5 rounded transition-colors">
+      Assign
+    </button>
+    {% endif %}
+    <button type="button" onclick="applyBatchSkip()"
+      class="bg-red-600/80 hover:bg-red-600 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors">
+      Skip selected
+    </button>
+    <span id="batch-error" class="text-xs text-red-400 hidden"></span>
+  </div>
+</div>
+
 {% if not items %}
 <div class="bg-slate-800 rounded-xl px-6 py-12 text-center">
   {% if current_category %}
@@ -132,7 +161,19 @@
 
 <div id="match-list" class="space-y-4">
 {% for item in items %}
-<div id="item-{{ loop.index }}" data-item class="bg-slate-800 rounded-xl p-5">
+<div id="item-{{ loop.index }}" data-item data-title-key="{{ item.title_key }}"
+     class="relative bg-slate-800 rounded-xl p-5 transition-all">
+  <!-- Checkbox -->
+  <button type="button"
+    onclick="toggleItem('{{ item.title_key | replace("'", "\\'") }}')"
+    class="absolute top-4 right-14 z-10 w-5 h-5 rounded border-2 border-slate-600 bg-slate-900/70
+           flex items-center justify-center transition-all check-btn"
+    aria-label="Select {{ item.display_title }}">
+    <svg class="w-3 h-3 text-white hidden check-icon" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+    </svg>
+  </button>
+
   <div class="flex items-start justify-between mb-4">
     <div>
       <p class="font-medium text-white">{{ item.display_title }}</p>
@@ -194,4 +235,100 @@
 {% endif %}
 
 {% endif %}
+
+<script>
+const selected = new Set();
+
+function toggleItem(key) {
+  const card = document.querySelector(`[data-title-key="${CSS.escape(key)}"]`);
+  if (!card) return;
+  const btn = card.querySelector('.check-btn');
+  const icon = card.querySelector('.check-icon');
+
+  if (selected.has(key)) {
+    selected.delete(key);
+    btn.classList.remove('border-sky-400', 'bg-sky-500/30');
+    btn.classList.add('border-slate-600');
+    icon.classList.add('hidden');
+    card.classList.remove('ring-1', 'ring-sky-500/40');
+  } else {
+    selected.add(key);
+    btn.classList.add('border-sky-400', 'bg-sky-500/30');
+    btn.classList.remove('border-slate-600');
+    icon.classList.remove('hidden');
+    card.classList.add('ring-1', 'ring-sky-500/40');
+  }
+  updateBatchBar();
+}
+
+function updateBatchBar() {
+  const bar = document.getElementById('batch-bar');
+  const countEl = document.getElementById('batch-count');
+  const n = selected.size;
+  bar.classList.toggle('hidden', n === 0);
+  countEl.textContent = `${n} selected`;
+}
+
+function clearSelection() {
+  [...selected].forEach(key => {
+    const card = document.querySelector(`[data-title-key="${CSS.escape(key)}"]`);
+    if (!card) return;
+    const btn = card.querySelector('.check-btn');
+    const icon = card.querySelector('.check-icon');
+    btn.classList.remove('border-sky-400', 'bg-sky-500/30');
+    btn.classList.add('border-slate-600');
+    icon.classList.add('hidden');
+    card.classList.remove('ring-1', 'ring-sky-500/40');
+  });
+  selected.clear();
+  updateBatchBar();
+}
+
+function selectAll() {
+  document.querySelectorAll('[data-title-key]').forEach(card => {
+    const key = card.dataset.titleKey;
+    if (!selected.has(key)) toggleItem(key);
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('batch-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+async function applyBatchSkip() {
+  if (selected.size === 0) { showError('Select at least one item.'); return; }
+  document.getElementById('batch-error').classList.add('hidden');
+  const form = new FormData();
+  selected.forEach(k => form.append('title_keys', k));
+  const res = await fetch('/api/unmatched/batch-dismiss', { method: 'POST', body: form });
+  if (res.ok) {
+    window.location.href = '/matches{% if current_category %}?category={{ current_category }}{% endif %}';
+  } else {
+    showError('Something went wrong.');
+  }
+}
+
+async function applyBatchGeneric() {
+  const sel = document.getElementById('batch-generic-select');
+  const poster_url = sel ? sel.value : '';
+  const category = sel ? sel.options[sel.selectedIndex]?.dataset.category : '';
+  if (!poster_url) { showError('Choose a generic first.'); return; }
+  if (selected.size === 0) { showError('Select at least one item.'); return; }
+  document.getElementById('batch-error').classList.add('hidden');
+  const form = new FormData();
+  selected.forEach(k => form.append('title_keys', k));
+  form.append('poster_url', poster_url);
+  form.append('match_name', category ? `generic:${category}` : 'generic');
+  form.append('match_source', 'manual');
+  const res = await fetch('/api/override/batch', { method: 'POST', body: form });
+  if (res.ok) {
+    window.location.href = '/matches{% if current_category %}?category={{ current_category }}{% endif %}';
+  } else {
+    showError('Something went wrong.');
+  }
+}
+</script>
+
 {% endblock %}
